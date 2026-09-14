@@ -14,7 +14,7 @@ class DailyBarRecord(BaseModel):
 
     @model_validator(mode='after') 
     def check_high_low(self) -> 'DailyBarRecord':
-        if self.high <= self.low:
+        if self.high < self.low:
             raise ValueError(f"high ({self.high}) must be >= low ({self.low})")
         return self
 
