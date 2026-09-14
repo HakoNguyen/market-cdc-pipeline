@@ -1,0 +1,27 @@
+# Python / Virtual Environment
+.venv/
+venv/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+
+# Environment variables & secrets
+.env
+*.env.local
+
+# Local Data Archive & Raw Downloads
+data/
+data/raw/
+
+# IDE & OS specific files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
