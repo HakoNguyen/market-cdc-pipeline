@@ -1,0 +1,39 @@
+version: 2
+
+models: 
+  - name: stg_daily_bar
+    columns:
+      - name: symbol
+        tests: 
+          - not_null
+      - name: trade_date
+        tests: 
+          - not_null
+  
+  - name: dim_instrument
+    columns: 
+      - name: symbol
+        tests: 
+          - not_null
+          - unique
+  
+  - name: fct_daily_bars
+    columns: 
+      - name: symbol
+        tests: 
+          - not_null
+          - relationships: 
+              to: ref('dim_instrument')
+              field: symbol
+      - name: trade_date
+        tests: 
+          - not_null
+  
+  - name: fct_corporate_actions
+    columns:
+      - name: symbol
+        tests: 
+          - not_null
+      - name: action_date
+        tests: 
+          - not_null
