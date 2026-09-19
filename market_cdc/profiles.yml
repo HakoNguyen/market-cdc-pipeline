@@ -1,0 +1,12 @@
+market_cdc:
+  target: dev
+  outputs:
+    dev:
+      type: starrocks
+      host: 127.0.0.1
+      port: 9030
+      username: root
+      password: ""
+      database: market_db
+      schema: analytics
+      threads: 4
