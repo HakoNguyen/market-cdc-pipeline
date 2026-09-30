@@ -1,6 +1,23 @@
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+import asyncio
+from pathlib import Path
+import sys
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.append(str(BASE_DIR))
+
+from ingestion.stream.binance_ws import stream_binance_trade
+
+
+def run_binance_stream():
+    print("Starting Binance WebSocket Streaming...")
+    try: 
+        asyncio.run(stream_binance_trade())
+    except Exception as e:
+        print(f"Error: {e}")
 
 default_args = {
     'owner': 'admin',
@@ -9,10 +26,6 @@ default_args = {
     'retries': 1,
     'retry_delay': timedelta(minutes=1),
 }
-
-def monitor_binance_websocket():
-    pass
-    return True
 
 
 with DAG(
@@ -24,6 +37,6 @@ with DAG(
 ) as dag:
     monitor_binance_task = PythonOperator(
         task_id='monitor_binance_websocket',
-        python_callable=monitor_binance_websocket,
+        python_callable=run_binance_stream,
     )
     

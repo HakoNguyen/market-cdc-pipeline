@@ -24,13 +24,15 @@ services:
     environment:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@market-airflow-postgres:5432/airflow_db
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
-      - _PIP_ADDITIONAL_REQUIREMENTS=yfinance pandas psycopg2-binary requests dbt-starrocks websocket-client
+      - _PIP_ADDITIONAL_REQUIREMENTS=yfinance pandas psycopg2-binary requests dbt-starrocks websocket-client websockets kafka-python
       - PYTHONPATH=/opt/airflow
       - POSTGRES_HOST=host.docker.internal
       - POSTGRES_PORT=5435
       - STARROCKS_HOST=host.docker.internal
+      - KAFKA_BOOTSTRAP_SERVERS=host.docker.internal:9092
     extra_hosts:
       - "host.docker.internal:host-gateway"
+      - "kafka:host-gateway"
     ports:
       - "8088:8080"
     volumes:
