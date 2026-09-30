@@ -6,11 +6,13 @@ import asyncio
 import websockets
 from kafka import KafkaProducer
 
-KAFKA_BOOTSTRAP_SERVERS = ["localhost:9094"]
+import os
+
+KAFKA_BOOTSTRAP_SERVERS = [os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9094")]
 KAFKA_TOPIC = "ws.raw_trades"
 BINANCE_WS_URL = "wss://stream.binance.com:9443/ws/btcusdt@trade"
 
-async def stream_binance_trade():
+async def stream_binance_trade(max_messages=None):
     producer = KafkaProducer(
         bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
         value_serializer=lambda x: json.dumps(x).encode('utf-8')
@@ -18,6 +20,7 @@ async def stream_binance_trade():
 
     async with websockets.connect(BINANCE_WS_URL) as ws:
         print(f"Connected to {BINANCE_WS_URL}")
+        count = 0
         while True:
             try: 
                 msg = await ws.recv()
@@ -32,7 +35,12 @@ async def stream_binance_trade():
                 }
 
                 producer.send(KAFKA_TOPIC, value=payload)
-                print(f"Sent trade: {payload}")
+                count += 1
+                print(f"Sent trade #{count}: {payload}")
+
+                if max_messages and count >= max_messages:
+                    print(f"Successfully streamed {count} trade messages.")
+                    break
             except Exception as e:
                 print(f"Error: {e}")
                 await asyncio.sleep(2)

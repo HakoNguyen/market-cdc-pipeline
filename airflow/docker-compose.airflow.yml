@@ -1,0 +1,46 @@
+name: market-cdc-airflow
+
+services:
+  market-airflow-postgres:
+    image: postgres:16-alpine
+    container_name: market-airflow-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow_db
+    ports:
+      - "5436:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow -d airflow_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  market-apache-airflow:
+    image: apache/airflow:2.8.1-python3.11
+    container_name: market-apache-airflow
+    restart: always
+    environment:
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@market-airflow-postgres:5432/airflow_db
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - _PIP_ADDITIONAL_REQUIREMENTS=yfinance pandas psycopg2-binary requests dbt-starrocks websocket-client websockets kafka-python
+      - PYTHONPATH=/opt/airflow
+      - POSTGRES_HOST=host.docker.internal
+      - POSTGRES_PORT=5435
+      - STARROCKS_HOST=host.docker.internal
+      - KAFKA_BOOTSTRAP_SERVERS=host.docker.internal:9092
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "kafka:host-gateway"
+    ports:
+      - "8088:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ../scripts:/opt/airflow/scripts
+      - ../ingestion:/opt/airflow/ingestion
+      - ../market_cdc:/opt/airflow/market_cdc
+    depends_on:
+      market-airflow-postgres:
+        condition: service_healthy
+    command: bash -c "airflow db init && airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com && airflow webserver & airflow scheduler"
