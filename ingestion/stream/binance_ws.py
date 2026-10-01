@@ -8,9 +8,9 @@ from kafka import KafkaProducer
 
 import os
 
-KAFKA_BOOTSTRAP_SERVERS = [os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9094")]
-KAFKA_TOPIC = "ws.raw_trades"
-BINANCE_WS_URL = "wss://stream.binance.com:9443/ws/btcusdt@trade"
+KAFKA_BOOTSTRAP_SERVERS = [os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")]
+KAFKA_TOPIC = "ws.kline_1m"
+BINANCE_WS_URL = "wss://stream.binance.com:9443/ws/btcusdt@kline_1m"
 
 async def stream_binance_trade(max_messages=None):
     producer = KafkaProducer(
@@ -24,14 +24,19 @@ async def stream_binance_trade(max_messages=None):
         while True:
             try: 
                 msg = await ws.recv()
-                trade_data = json.loads(msg)
+                data = json.loads(msg)
+                kline = data.get('k', {})
                 payload = {
-                    'trade_id': trade_data.get('t'),
-                    'symbol': trade_data.get('s'),
-                    'price': float(trade_data.get('p', 0)),
-                    'qty': float(trade_data.get('q', 0)),
-                    'tradeTime': trade_data.get('T'),
-                    'is_buyer_maker': trade_data.get('m')
+                    'symbol': kline.get('s'),
+                    'start_time': kline.get('t'),
+                    'close_time': kline.get('T'),
+                    'open': float(kline.get('o', 0)),
+                    'high': float(kline.get('h', 0)),
+                    'low': float(kline.get('l', 0)),
+                    'close': float(kline.get('c', 0)),
+                    'volume': float(kline.get('v', 0)),
+                    'trades_count': float(kline.get('n', 0)),
+                    'is_close': kline.get('x', False)
                 }
 
                 producer.send(KAFKA_TOPIC, value=payload)

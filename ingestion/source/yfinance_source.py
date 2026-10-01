@@ -26,7 +26,6 @@ class YFinanceSource:
                 high=float(row['High']),
                 low=float(row['Low']),
                 close=float(row['Close']),
-                adj_close=float(row['Adj Close']),
                 volume=int(row['Volume']),
             )
             records.append(record)

@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS raw_daily_bar(
     high DECIMAL(18, 4),
     low DECIMAL(18, 4),
     close DECIMAL(18, 4),
-    adj_close DECIMAL(18, 4),
     volume BIGINT,
     updated_at DATETIME,
     op VARCHAR(10), 

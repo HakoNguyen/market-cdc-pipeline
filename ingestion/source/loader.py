@@ -32,18 +32,12 @@ class PostgresLoader:
             return 
         
         sql = """
-        INSERT INTO daily_bar (symbol, trade_date, open, high, low, close, adj_close, volume)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        ON CONFLICT (symbol, trade_date) DO UPDATE SET
-        open = EXCLUDED.open,
-        high = EXCLUDED.high,
-        low = EXCLUDED.low,
-        close = EXCLUDED.close,
-        adj_close = EXCLUDED.adj_close,
-        volume = EXCLUDED.volume;
+            INSERT INTO daily_bar (symbol, trade_date, open, high, low, close, volume)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (symbol, trade_date) DO NOTHING;
         """
         data_typles = [(
-            r.symbol, r.trade_date, r.open, r.high, r.low, r.close, r.adj_close, r.volume
+            r.symbol, r.trade_date, r.open, r.high, r.low, r.close, r.volume
         ) for r in records]
         with self.get_connection() as conn:
             with conn.cursor() as cur:

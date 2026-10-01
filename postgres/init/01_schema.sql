@@ -5,7 +5,6 @@ create table if not exists daily_bar(
     trade_date date not null, 
     open numeric(18, 4),
     high numeric(18, 4),
-    adj_close numeric(18, 4),
     low numeric(18, 4),
     close numeric(18, 4),
     volume bigint, 

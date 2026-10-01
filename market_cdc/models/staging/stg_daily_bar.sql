@@ -10,7 +10,6 @@ renamed as (
         cast(high as decimal(18,4)) as high, 
         cast(low as decimal(18,4)) as low,
         cast(close as decimal(18,4)) as close,
-        cast(adj_close as decimal(18,4)) as adj_close,
         cast(volume as bigint) as volume,
         updated_at,
         op as cdc_op,
