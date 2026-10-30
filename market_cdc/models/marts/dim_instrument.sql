@@ -1,4 +1,4 @@
---- Bảng Dimension chứa thông tin các mã cổ phiếu / crypto, sàn giao dịch và ngành nghề.
+--- Bảng Dimension chứa thông tin các mã cổ phiếu, sàn giao dịch và ngành nghề.
 
 with stg as (
     select * from {{ ref('stg_instrument') }}
