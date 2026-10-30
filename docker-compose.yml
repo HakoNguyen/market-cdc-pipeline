@@ -122,13 +122,14 @@ services:
       - airflow_pg_data:/var/lib/postgresql/data
 
   airflow:
-    image: apache/airflow:2.8.1-python3.11
+    build: ./airflow
+    image: market-cdc-airflow:2.8.1
     container_name: market-airflow
     restart: always
     environment:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow_db
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
-      - _PIP_ADDITIONAL_REQUIREMENTS=yfinance pandas psycopg2-binary requests dbt-starrocks
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - PYTHONPATH=/opt/airflow
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
@@ -147,7 +148,7 @@ services:
         condition: service_healthy
       starrocks:
         condition: service_healthy
-    command: bash -c "airflow db init && airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com && airflow webserver & airflow scheduler"
+    command: bash -c "airflow db migrate && airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com && { airflow webserver & exec airflow scheduler; }"
 
 volumes:
   pg_data:
