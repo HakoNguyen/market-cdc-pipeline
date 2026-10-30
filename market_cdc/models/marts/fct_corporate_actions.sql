@@ -10,4 +10,4 @@ select
     value, 
     value_raw,
     updated_at
-from stg;
+from stg

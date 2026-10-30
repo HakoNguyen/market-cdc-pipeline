@@ -10,7 +10,8 @@ indicators as (
     raw_high as high, 
     raw_low as low, 
     raw_close as close, 
-    adj_close, 
+    adj_close,
+    volume,
     avg(adj_close) over (partition by symbol order by trade_date rows between 19
     preceding and current row) as sma_20,
     avg(adj_close) over (partition by symbol order by trade_date rows between 49
@@ -26,4 +27,4 @@ indicators as (
     from stg
 )
 select * from indicators
-order by symbol, trade_date;
+order by symbol, trade_date

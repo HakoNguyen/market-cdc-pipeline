@@ -11,4 +11,4 @@ select
     sector,
     is_listed,
     updated_at
-from stg;
+from stg

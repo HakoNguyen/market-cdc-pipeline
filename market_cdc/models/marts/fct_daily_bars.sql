@@ -17,4 +17,4 @@ select
     sma_25, 
     prev_close, 
     daily_return_pct
-from indicators;
+from indicators
