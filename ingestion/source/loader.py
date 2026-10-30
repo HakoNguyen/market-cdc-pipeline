@@ -1,5 +1,6 @@
 import os 
 import json
+from typing import Optional
 import psycopg2
 from datetime import date
 from ingestion.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS, DATA_RAW_DIR
@@ -76,3 +77,12 @@ class PostgresLoader:
             with conn.cursor() as cur: 
                 cur.executemany(sql, data_tuples)
             conn.commit()
+
+    def get_max_trade_date(self, symbol: str) -> Optional[date]:
+        sql = "SELECT MAX(trade_date) FROM daily_bar WHERE symbol = %s"
+        with self.get_connection() as conn:
+            with conn.cursor() as cur: 
+                cur.execute(sql, (symbol,))
+                res = cur.fetchone()
+                return res[0] if res and res[0] else None
+
