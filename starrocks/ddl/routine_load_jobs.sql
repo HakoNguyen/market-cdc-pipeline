@@ -15,7 +15,7 @@ PROPERTIES(
 )
 FROM KAFKA
 (
-    "kafka_broker_list" = "kafka:9092",
+    "kafka_broker_list" = "kafka:29092",
     "kafka_topic" = "market.public.daily_bar",
     "kafka_partitions" = "0",
     "kafka_offsets" = "0"
@@ -30,7 +30,7 @@ PROPERTIES(
 )
 FROM KAFKA
 (
-    "kafka_broker_list" = "kafka:9092",
+    "kafka_broker_list" = "kafka:29092",
     "kafka_topic" = "market.public.instrument",
     "kafka_partitions" = "0",
     "kafka_offsets" = "0"
@@ -46,7 +46,7 @@ PROPERTIES
 )
 FROM KAFKA
 (
-    "kafka_broker_list" = "kafka:9092",
+    "kafka_broker_list" = "kafka:29092",
     "kafka_topic" = "market.public.corporate_action",
     "kafka_partitions" = "0",
     "kafka_offsets" = "0"
