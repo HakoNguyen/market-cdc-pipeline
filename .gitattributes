@@ -1,0 +1,4 @@
+# Script chạy bằng bash/make phải giữ LF kể cả khi checkout trên Windows (core.autocrlf=true),
+# nếu không bash báo lỗi `$'\r': command not found`
+*.sh     text eol=lf
+Makefile text eol=lf

@@ -1,0 +1,16 @@
+{
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "tasks.max": "1",
+    "plugin.name": "pgoutput",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "${env:POSTGRES_USER}",
+    "database.password": "${env:POSTGRES_PASSWORD}",
+    "database.dbname": "${env:POSTGRES_DB}",
+    "topic.prefix": "market",
+    "publication.name": "dbz_publication",
+    "publication.autocreate.mode": "disabled",
+    "table.include.list": "public.daily_bar,public.instrument,public.corporate_action",
+    "tombstones.on.delete": "true",
+    "decimal.handling.mode": "double"
+}
