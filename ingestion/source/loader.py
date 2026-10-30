@@ -35,7 +35,15 @@ class PostgresLoader:
         sql = """
             INSERT INTO daily_bar (symbol, trade_date, open, high, low, close, volume)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (symbol, trade_date) DO NOTHING;
+            ON CONFLICT (symbol, trade_date) DO UPDATE SET
+                open = EXCLUDED.open,
+                high = EXCLUDED.high,
+                low = EXCLUDED.low,
+                close = EXCLUDED.close,
+                volume = EXCLUDED.volume
+            -- Chỉ UPDATE khi giá trị thực sự đổi, tránh sinh CDC event rác
+            WHERE (daily_bar.open, daily_bar.high, daily_bar.low, daily_bar.close, daily_bar.volume)
+                IS DISTINCT FROM (EXCLUDED.open, EXCLUDED.high, EXCLUDED.low, EXCLUDED.close, EXCLUDED.volume);
         """
         data_typles = [(
             r.symbol, r.trade_date, r.open, r.high, r.low, r.close, r.volume
@@ -51,7 +59,9 @@ class PostgresLoader:
         sql = """
         INSERT INTO corporate_action (symbol, action_date, action_type, value, value_raw)
         VALUES (%s, %s, %s, %s, %s)
-        ON CONFLICT (symbol, action_date, action_type) DO UPDATE SET value = EXCLUDED.value, value_raw = EXCLUDED.value_raw;
+        ON CONFLICT (symbol, action_date, action_type) DO UPDATE SET value = EXCLUDED.value, value_raw = EXCLUDED.value_raw
+        WHERE (corporate_action.value, corporate_action.value_raw)
+            IS DISTINCT FROM (EXCLUDED.value, EXCLUDED.value_raw);
         """
         date_str = date.today().strftime('%Y-%m-%d')
         data_tuples = [(r.symbol, r.action_date, r.action_type, r.value, r.value_raw) for r in records]
@@ -70,7 +80,9 @@ class PostgresLoader:
             name = EXCLUDED.name,
             exchange = EXCLUDED.exchange,
             sector = EXCLUDED.sector,
-            is_listed = EXCLUDED.is_listed;
+            is_listed = EXCLUDED.is_listed
+        WHERE (instrument.name, instrument.exchange, instrument.sector, instrument.is_listed)
+            IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.exchange, EXCLUDED.sector, EXCLUDED.is_listed);
         """
         data_tuples = [(record.symbol, record.name, record.exchange, record.sector, record.is_listed)]
         with self.get_connection() as conn:
