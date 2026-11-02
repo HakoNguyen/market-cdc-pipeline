@@ -47,7 +47,7 @@ flowchart LR
     pg -->|"logical replication (WAL)"| dbz --> kafka
     kafka -->|"Routine Load"| sr --> dbt --> marts
     af -.->|ingest| ing
-    af -.->|"dbt run / test"| dbt
+    af -.->|"dbt build"| dbt
 ```
 
 | Layer | Tech | What it does |
@@ -58,7 +58,7 @@ flowchart LR
 | CDC | Debezium 2.5 + Kafka 3.7 | One topic per table (`market.public.<table>`) |
 | Warehouse | StarRocks 4.1 | Routine Load jobs pull each topic into Primary Key tables |
 | Transform | dbt (dbt-starrocks) | Staging views, adjustment factors, adjusted prices, SMA and returns |
-| Orchestration | Airflow 2.8 (LocalExecutor) | Daily DAG: ingest → verify → `dbt run` → `dbt test` |
+| Orchestration | Airflow 2.8 (LocalExecutor) | Daily DAG: ingest → wait for CDC sync (sensor) → source freshness → dbt build |
 
 ## How price adjustment works
 
@@ -131,8 +131,7 @@ Then rebuild the models:
 
 ```bash
 cd market_cdc
-dbt run --profiles-dir .
-dbt test --profiles-dir .
+dbt build --profiles-dir .
 ```
 
 And query the result in StarRocks:
