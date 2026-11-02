@@ -1,0 +1,24 @@
+version: 2
+
+sources:
+  - name: market_db
+    description: Bảng raw do StarRocks Routine Load nạp từ các CDC topic của Debezium (bản sao trạng thái hiện tại của Postgres)
+    # StarRocks đặt tên 3 phần là catalog.database.table; bảng nội bộ nằm trong catalog default_catalog.
+    # Không khai báo, dbt lấy database của profile làm catalog -> "Unknown catalog 'market_db'".
+    database: default_catalog
+    schema: market_db
+    tables:
+      - name: raw_daily_bar
+        description: Nến ngày, giá THÔ (chưa điều chỉnh)
+        # Độ mới theo ngày giao dịch, không theo _ingest_at: upsert idempotent nên ngày không có
+        # thay đổi sẽ không sinh event, _ingest_at đứng yên dù pipeline vẫn khoẻ.
+        # warn 4 ngày: qua được cuối tuần; error 10 ngày: qua được nghỉ Tết.
+        config:
+          loaded_at_field: cast(trade_date as datetime)
+          freshness:
+            warn_after: {count: 4, period: day}
+            error_after: {count: 10, period: day}
+      - name: raw_corporate_action
+        description: Sự kiện quyền (cổ tức tiền, cổ tức cổ phiếu, thưởng, quyền mua)
+      - name: raw_instrument
+        description: Thông tin mã chứng khoán

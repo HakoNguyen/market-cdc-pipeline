@@ -1,5 +1,5 @@
 with source as (
-    select * from market_db.raw_daily_bar
+    select * from {{ source('market_db', 'raw_daily_bar') }}
 ),
 
 renamed as (

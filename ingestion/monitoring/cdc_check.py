@@ -42,8 +42,3 @@ def cdc_caught_up() -> bool:
     finally:
         pg.close()
         sr.close()
-
-
-# # test
-# if __name__ == "__main__":
-#     print(cdc_caught_up())

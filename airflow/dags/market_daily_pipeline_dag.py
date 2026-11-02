@@ -44,15 +44,18 @@ with DAG(
         timeout=10 * 60,         # quá 10 phút vẫn chưa khớp -> FAIL
     )
 
-    dbt_run_task = BashOperator(
-        task_id='dbt_run_model',
-        bash_command='cd /opt/airflow/market_cdc && dbt clean && dbt run --profiles-dir .',
+    # Nguồn có dữ liệu mới không (API chết thì Postgres và StarRocks cùng cũ, sensor vẫn cho qua).
+    # warn -> chỉ cảnh báo; error -> task fail, không build trên dữ liệu cũ.
+    dbt_freshness_task = BashOperator(
+        task_id='dbt_source_freshness',
+        bash_command='cd /opt/airflow/market_cdc && dbt source freshness --profiles-dir .',
     )
 
-    dbt_test_task = BashOperator(
-        task_id='dbt_test_quality_gates',
-        bash_command='cd /opt/airflow/market_cdc && dbt test --profiles-dir .',
+    # build = run + test theo thứ tự DAG của dbt: test của model nào fail thì các model phía sau bị SKIP
+    dbt_build_task = BashOperator(
+        task_id='dbt_build',
+        bash_command='cd /opt/airflow/market_cdc && dbt build --profiles-dir .',
     )
 
-    ingest_task >> wait_for_cdc_task >> dbt_run_task >> dbt_test_task
+    ingest_task >> wait_for_cdc_task >> dbt_freshness_task >> dbt_build_task
 
