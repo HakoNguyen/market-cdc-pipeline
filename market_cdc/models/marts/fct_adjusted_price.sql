@@ -18,6 +18,8 @@ action_factors as (
             else 1.0
         end as factor
     from corporate_actions
+    -- Sự kiện được công bố trước ngày GDKHQ; chỉ điều chỉnh khi ngày GDKHQ đã tới
+    where action_date <= current_date()
 ),
 
 -- Join daily bars with corporate actions that happened AFTER trade_date (ex_date > trade_date)
@@ -30,7 +32,7 @@ bars_with_factors as (
         b.low,
         b.close,
         b.volume,
-        coalesce(exp(sum(log(a.factor))), 1.0) as cum_adjustment_factor
+        coalesce(exp(sum(ln(a.factor))), 1.0) as cum_adjustment_factor
     from daily_bars b
     left join action_factors a
         on b.symbol = a.symbol
