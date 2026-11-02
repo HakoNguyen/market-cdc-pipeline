@@ -13,4 +13,10 @@ DB_NAME = os.getenv("POSTGRES_DB", "market_db")
 DB_USER = os.getenv("POSTGRES_USER", "postgres")
 DB_PASS = os.getenv("POSTGRES_PASSWORD", "postgres")
 
+STARROCKS_HOST = os.getenv("STARROCKS_HOST", "localhost")
+STARROCKS_PORT = int(os.getenv("STARROCKS_PORT", "9030"))
+STARROCKS_USER = os.getenv("STARROCKS_USER", "root")
+STARROCKS_PASSWORD = os.getenv("STARROCKS_PASSWORD", "")
+
+
 DATA_RAW_DIR = "data/raw"

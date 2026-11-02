@@ -3,6 +3,7 @@
 # Keep this file ASCII-only: pip on Windows may decode it with the system codepage.
 pydantic==2.13.5
 psycopg2-binary==2.9.13
+mysql-connector-python==26.7.0
 requests==2.34.2
 dbt-core==1.12.5
 dbt-starrocks==1.12.2
