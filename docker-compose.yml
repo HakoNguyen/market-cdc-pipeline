@@ -11,6 +11,9 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-market_db}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      # Dùng bởi postgres/init/03_debezium_user.sh
+      DEBEZIUM_DB_USER: ${DEBEZIUM_DB_USER:-debezium}
+      DEBEZIUM_DB_PASSWORD: ${DEBEZIUM_DB_PASSWORD:-debezium}
     volumes:
       - ./postgres/init:/docker-entrypoint-initdb.d
       - pg_data:/var/lib/postgresql/data
@@ -84,8 +87,8 @@ services:
       CONNECT_CONFIG_PROVIDERS: env
       CONNECT_CONFIG_PROVIDERS_ENV_CLASS: org.apache.kafka.common.config.provider.EnvVarConfigProvider
       POSTGRES_DB: ${POSTGRES_DB:-market_db}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DEBEZIUM_DB_USER: ${DEBEZIUM_DB_USER:-debezium}
+      DEBEZIUM_DB_PASSWORD: ${DEBEZIUM_DB_PASSWORD:-debezium}
     healthcheck:
       test: [ "CMD-SHELL", "curl -fsS http://localhost:8083/ > /dev/null" ]
       interval: 10s

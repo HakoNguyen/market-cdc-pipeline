@@ -17,11 +17,13 @@ log "Khởi động stack và chờ các service healthy"
 docker compose up -d --wait --wait-timeout 300
 
 # Tạo topic trước Routine Load: job tạo trên topic chưa tồn tại sẽ bị PAUSED (unknown topic)
+# compact: giữ bản mới nhất của mỗi khoá chính vô thời hạn, thay vì xoá mọi message sau 7 ngày (retention mặc định)
 log "Kafka: tạo CDC topics"
 for t in $CDC_TOPICS; do
   # Bỏ cảnh báo vô hại về '.' và '_' trong tên topic, nhưng vẫn in toàn bộ output nếu lệnh lỗi
   out=$(docker compose exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 \
-    --create --if-not-exists --topic "$t" --partitions 1 --replication-factor 1 2>&1) || { echo "$out"; exit 1; }
+    --create --if-not-exists --topic "$t" --partitions 1 --replication-factor 1 \
+    --config cleanup.policy=compact 2>&1) || { echo "$out"; exit 1; }
   grep -v "limitations in metric names" <<< "$out" || true
 done
 echo "OK"

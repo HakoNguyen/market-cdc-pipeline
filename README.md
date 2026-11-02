@@ -149,7 +149,7 @@ ORDER BY trade_date;
 | Schema | Model | Materialization | Content |
 |---|---|---|---|
 | `market_db` | `raw_daily_bar`, `raw_corporate_action`, `raw_instrument` | Primary Key table | Latest row per key from CDC, plus `op`, `op_ts`, `_ingest_at` |
-| `analytics` | `stg_daily_bar`, `stg_corporate_action`, `stg_instrument` | view | Typed columns, CDC metadata renamed, delete events filtered |
+| `analytics` | `stg_daily_bar`, `stg_corporate_action`, `stg_instrument` | view | Typed columns, CDC metadata renamed, deletes are applied upstream (Routine Load maps them to StarRocks __op) |
 | `analytics` | `fct_adjusted_price` | table | Raw OHLC, cumulative adjustment factor, adjusted OHLC |
 | `analytics` | `int_daily_bar_indicators` | view | SMA 20/25/50 and daily return on adjusted close |
 | `analytics` | `fct_daily_bars` | table | Raw OHLCV + adjusted close + indicators |
