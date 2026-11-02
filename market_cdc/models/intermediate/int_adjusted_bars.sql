@@ -2,24 +2,10 @@ with daily_bars as (
     select * from {{ ref('stg_daily_bar') }}
 ),
 
-corporate_actions as (
-    select * from {{ ref('stg_corporate_action') }}
-),
-
--- Adjustment factor per ex-date.
--- TẠM (1.2): chỉ sự kiện chia thêm cổ phiếu. Nhiều đợt cùng ngày thì sàn CỘNG tỷ lệ (vd BSR
--- 2025-10-29: thưởng 31.5% + cổ tức cp 30% -> 1/1.615), không nhân từng factor.
--- Cổ tức tiền + quyền mua theo công thức gộp của sàn làm ở 1.3.
+-- 1 hệ số / (symbol, ex_date) theo công thức giá tham chiếu gộp của sàn
 action_factors as (
-    select
-        symbol,
-        ex_date,
-        1.0 / (1 + sum(ratio)) as factor
-    from corporate_actions
-    where action_type in ('stock_dividend', 'bonus_share')
-      -- Sự kiện được công bố trước ngày GDKHQ; chỉ điều chỉnh khi ngày GDKHQ đã tới
-      and ex_date <= current_date()
-    group by symbol, ex_date
+    select symbol, ex_date, factor
+    from {{ ref('int_adjustment_factor') }}
 ),
 
 -- Join daily bars with corporate actions that happened AFTER trade_date (ex_date > trade_date)

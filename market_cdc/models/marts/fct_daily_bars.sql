@@ -12,9 +12,9 @@ select
     close,
     adj_close,
     volume,
-    sma_20, 
-    sma_50, 
-    sma_25, 
-    prev_close, 
+    sma_20,
+    sma_50,
+    vol_sma_20,
+    prev_adj_close,
     daily_return_pct
 from indicators
