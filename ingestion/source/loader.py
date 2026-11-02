@@ -57,15 +57,20 @@ class PostgresLoader:
         if not records: return 
         
         sql = """
-        INSERT INTO corporate_action (symbol, action_date, action_type, value, value_raw)
-        VALUES (%s, %s, %s, %s, %s)
-        ON CONFLICT (symbol, action_date, action_type) DO UPDATE SET value = EXCLUDED.value, value_raw = EXCLUDED.value_raw
-        WHERE (corporate_action.value, corporate_action.value_raw)
-            IS DISTINCT FROM (EXCLUDED.value, EXCLUDED.value_raw);
+        INSERT INTO corporate_action (symbol, ex_date, action_type, cash_amount, ratio, subscription_price, announce_date)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT (symbol, ex_date, action_type) DO UPDATE SET
+            cash_amount = EXCLUDED.cash_amount,
+            ratio = EXCLUDED.ratio,
+            subscription_price = EXCLUDED.subscription_price,
+            announce_date = EXCLUDED.announce_date
+        WHERE (corporate_action.cash_amount, corporate_action.ratio, corporate_action.subscription_price, corporate_action.announce_date)
+            IS DISTINCT FROM (EXCLUDED.cash_amount, EXCLUDED.ratio, EXCLUDED.subscription_price, EXCLUDED.announce_date);
         """
-        date_str = date.today().strftime('%Y-%m-%d')
-        data_tuples = [(r.symbol, r.action_date, r.action_type, r.value, r.value_raw) for r in records]
-
+        data_tuples = [
+            (r.symbol, r.ex_date, r.action_type, r.cash_amount, r.ratio, r.subscription_price, r.announce_date)
+            for r in records]
+        
         with self.get_connection() as conn:
             with conn.cursor() as cur: 
                 cur.executemany(sql, data_tuples)

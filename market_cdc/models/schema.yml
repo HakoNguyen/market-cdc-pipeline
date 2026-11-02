@@ -35,6 +35,11 @@ models:
       - name: symbol
         tests: 
           - not_null
-      - name: action_date
-        tests: 
+      - name: ex_date
+        tests:
           - not_null
+      - name: action_type
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['cash_dividend', 'stock_dividend', 'bonus_share', 'rights_issue']

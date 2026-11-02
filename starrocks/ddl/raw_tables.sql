@@ -32,15 +32,17 @@ PRIMARY KEY(symbol)
 DISTRIBUTED BY HASH(symbol) BUCKETS 4 PROPERTIES("replication_num" = "1");
 
 CREATE TABLE IF NOT EXISTS raw_corporate_action(
-    symbol VARCHAR(20) NOT NULL, 
-    action_date DATE NOT NULL, 
+    symbol VARCHAR(20) NOT NULL,
+    ex_date DATE NOT NULL,
     action_type VARCHAR(20) NOT NULL,
-    value DECIMAL(18, 6), 
-    value_raw DECIMAL(18, 6), 
+    cash_amount DECIMAL(18, 2),
+    ratio DECIMAL(10, 6),
+    subscription_price DECIMAL(18, 2),
+    announce_date DATE,
     updated_at DATETIME,
     op VARCHAR(10),
-    op_ts BIGINT, 
+    op_ts BIGINT,
     _ingest_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )
-PRIMARY KEY(symbol, action_date, action_type)
+PRIMARY KEY(symbol, ex_date, action_type)
 DISTRIBUTED BY HASH(symbol) BUCKETS 4 PROPERTIES("replication_num" = "1");

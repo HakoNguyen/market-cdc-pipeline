@@ -1,13 +1,15 @@
---- Bảng Fact lưu các sự kiện chia cổ tức, thưởng cổ phiếu, chia tách doanh nghiệp.
+--- Bảng Fact lưu các sự kiện quyền: cổ tức tiền, cổ tức cổ phiếu, thưởng cổ phiếu, phát hành quyền mua.
 with stg as (
     select * from {{ ref('stg_corporate_action') }}
 )
 
-select 
+select
     symbol,
-    action_date,
+    ex_date,
     action_type,
-    value, 
-    value_raw,
+    cash_amount,
+    ratio,
+    subscription_price,
+    announce_date,
     updated_at
 from stg

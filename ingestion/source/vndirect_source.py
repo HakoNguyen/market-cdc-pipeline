@@ -5,7 +5,6 @@ ngày 2025-07-21: close 126.03 -> 110.3. yfinance thì đã điều chỉnh sẵ
 Đã đối chiếu: hệ số tự tính từ giá thô + events khớp adClose của VNDirect, lệch tối đa 0.005%
 trên 953 phiên FPT (2023-2026).
 """
-from collections import defaultdict
 from datetime import date
 
 import requests
@@ -18,10 +17,12 @@ BASE_URL = "https://api-finfo.vndirect.com.vn/v4"
 PAGE_SIZE = 500
 PRICE_UNIT = 1000  # API trả giá theo nghìn VND, lưu theo VND
 
-# Sự kiện chia thêm cổ phiếu: cổ tức bằng cổ phiếu, thưởng cổ phiếu (ratio = số cp mới / 100 cp cũ)
-SHARE_EVENT_TYPES = {"STOCKDIV", "KINDDIV"}
-
-
+EVENT_TYPE_MAP = {
+    "DIVIDEND": "cash_dividend",   # cổ tức tiền mặt
+    "STOCKDIV": "stock_dividend",  # cổ tức bằng cổ phiếu
+    "KINDDIV": "bonus_share",      # thưởng cổ phiếu
+    "ISSUE": "rights_issue",       # phát hành quyền mua cho cổ đông hiện hữu
+}
 class VNDirectSource:
     def __init__(self, session: requests.Session | None = None, timeout: int = 30):
         if session is None:
@@ -69,27 +70,40 @@ class VNDirectSource:
         ]
 
     def get_corporate_actions(self, symbol: str) -> list[CorporateActionRecord]:
-        # Tạm map vào schema hiện tại (dividend/split); quyền mua (ISSUE) cần schema mới ở bước 1.2.
-        # Nhiều sự kiện cùng loại trong một ngày được gộp: sàn tính giá tham chiếu theo tổng.
-        cash = defaultdict(float)
-        share_ratio = defaultdict(float)
-        for e in self._get_all("events", f"code:{symbol}~locale:EN_GB"):
+        merged: dict[tuple[str, str], dict] = {}
+        for e in self._get_all('events', f"code:{symbol}~locale:EN_GB"):
+            action_type = EVENT_TYPE_MAP.get(e["type"])
             ex_date = e.get("effectiveDate")
-            if not ex_date:
+            if action_type is None or not ex_date:
                 continue
-            if e["type"] == "DIVIDEND" and e.get("dividend"):
-                cash[ex_date] += e["dividend"]
-            elif e["type"] in SHARE_EVENT_TYPES and e.get("ratio"):
-                share_ratio[ex_date] += e["ratio"]
+            fields = {"ex_date":ex_date, "action_type": action_type, "announce_date": e.get("disclosureDate")}
+            if action_type == "cash_dividend":
+                fields["cash_amount"] = e["dividend"]
+            else: 
+                fields["ratio"] = e["ratio"] / 100
+            if action_type == "rights_issue":
+                fields["subscription_price"] = e["price"]
+            
+            key = (ex_date, action_type)
+            if key not in merged: 
+                merged[key] = fields
+                continue
 
-        records = [
-            CorporateActionRecord(symbol=symbol, action_date=d, action_type="dividend", value=v)
-            for d, v in cash.items()
-        ] + [
-            CorporateActionRecord(symbol=symbol, action_date=d, action_type="split", value=1 + r / 100)
-            for d, r in share_ratio.items()
-        ]
-        return sorted(records, key=lambda r: (r.action_date, r.action_type))
+            prev = merged[key]
+            if action_type == "rights_issue" and prev["subscription_price"] != fields["subscription_price"]:
+                raise ValueError(f"{symbol} {ex_date}: hai đợt quyền mua khác giá, không gộp được")
+            if action_type == "cash_dividend":
+                prev["cash_amount"] += fields["cash_amount"]
+            else:
+                prev["ratio"] += fields["ratio"]
+            prev["announce_date"] = min(
+                (d for d in (prev["announce_date"], fields["announce_date"]) if d), default=None
+            )
+
+        return sorted(
+            (CorporateActionRecord(symbol=symbol, **f) for f in merged.values()),
+            key=lambda r: (r.ex_date, r.action_type),
+        )
 
     def get_instrument_info(self, symbol: str) -> InstrumentRecord:
         stock = self._get_all("stocks", f"code:{symbol}")[0]

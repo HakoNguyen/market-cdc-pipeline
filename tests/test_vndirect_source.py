@@ -61,22 +61,37 @@ def test_pagination_stops_at_first_short_page():
 
 def test_corporate_actions_mapping():
     events = [
-        {"type": "DIVIDEND", "effectiveDate": "2024-06-12", "dividend": 1000.0, "ratio": 10.0},
-        # cổ tức cổ phiếu + thưởng cùng ngày -> gộp tỷ lệ: 1 + (10 + 5)/100
-        {"type": "KINDDIV", "effectiveDate": "2024-06-12", "ratio": 10.0},
-        {"type": "STOCKDIV", "effectiveDate": "2024-06-12", "ratio": 5.0},
-        {"type": "ISSUE", "effectiveDate": "2024-09-23", "ratio": 10.0, "price": 15000.0},  # chờ schema 1.2
-        {"type": "MEETING", "effectiveDate": "2024-04-20"},
-        {"type": "DIVIDEND", "dividend": 500.0},  # thiếu ngày GDKHQ -> bỏ
+        # VNM: 2 kỳ cổ tức cùng ngày GDKHQ -> cộng tiền, lấy ngày công bố sớm nhất
+        {"type": "DIVIDEND", "effectiveDate": "2024-09-24", "dividend": 950.0, "disclosureDate": "2024-09-10"},
+        {"type": "DIVIDEND", "effectiveDate": "2024-09-24", "dividend": 1500.0, "disclosureDate": "2024-09-12"},
+        {"type": "KINDDIV", "effectiveDate": "2025-07-21", "ratio": 15.0, "disclosureDate": "2025-07-10"},
+        {"type": "STOCKDIV", "effectiveDate": "2025-10-29", "ratio": 10.0, "disclosureDate": "2025-10-15"},
+        {"type": "ISSUE", "effectiveDate": "2025-12-08", "ratio": 20.0, "price": 15000.0, "disclosureDate": "2025-11-20"},
+        {"type": "MEETING", "effectiveDate": "2024-04-20"},   # không làm thay đổi giá -> bỏ
+        {"type": "DIVIDEND", "dividend": 500.0},               # thiếu ngày GDKHQ -> bỏ
     ]
     session = FakeSession({"events": [events]})
 
-    actions = VNDirectSource(session=session).get_corporate_actions("FPT")
+    actions = VNDirectSource(session=session).get_corporate_actions("VNM")
 
-    assert [(a.action_date, a.action_type, a.value) for a in actions] == [
-        (date(2024, 6, 12), "dividend", 1000.0),
-        (date(2024, 6, 12), "split", 1.15),
+    assert [(a.ex_date, a.action_type, a.cash_amount, a.ratio, a.subscription_price, a.announce_date)
+            for a in actions] == [
+        (date(2024, 9, 24), "cash_dividend", 2450.0, None, None, date(2024, 9, 10)),
+        (date(2025, 7, 21), "bonus_share", None, 0.15, None, date(2025, 7, 10)),
+        (date(2025, 10, 29), "stock_dividend", None, 0.1, None, date(2025, 10, 15)),
+        (date(2025, 12, 8), "rights_issue", None, 0.2, 15000.0, date(2025, 11, 20)),
     ]
+
+
+def test_conflicting_rights_issues_on_same_day_raise():
+    events = [
+        {"type": "ISSUE", "effectiveDate": "2025-12-08", "ratio": 20.0, "price": 15000.0, "disclosureDate": "2025-11-20"},
+        {"type": "ISSUE", "effectiveDate": "2025-12-08", "ratio": 10.0, "price": 12000.0, "disclosureDate": "2025-11-20"},
+    ]
+    session = FakeSession({"events": [events]})
+
+    with pytest.raises(ValueError):
+        VNDirectSource(session=session).get_corporate_actions("SSI")
 
 
 def test_instrument_info():
@@ -102,5 +117,5 @@ def test_live_prices_are_unadjusted_at_ex_date():
     # 1/1.15 = 0.8696, cộng/trừ biên độ dao động HOSE 7% trong phiên
     assert 0.8696 * 0.93 < ratio < 0.8696 * 1.07
 
-    bonus = [a for a in source.get_corporate_actions("FPT") if a.action_date == date(2025, 7, 21)]
-    assert [(a.action_type, a.value) for a in bonus] == [("split", 1.15)]
+    bonus = [a for a in source.get_corporate_actions("FPT") if a.ex_date == date(2025, 7, 21)]
+    assert [(a.action_type, a.ratio) for a in bonus] == [("bonus_share", 0.15)]

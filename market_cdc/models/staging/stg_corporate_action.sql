@@ -5,10 +5,12 @@ with source as (
 renamed as (
     select 
         symbol, 
-        action_date,
+        ex_date,
         action_type,
-        cast(value as decimal(18,6)) as value,
-        cast(value_raw as decimal(18,6)) as value_raw,
+        cash_amount,
+        ratio,
+        subscription_price,
+        announce_date,
         updated_at,
         op as cdc_op,
         op_ts as cdc_op_ts,
