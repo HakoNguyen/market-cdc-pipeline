@@ -1,11 +1,13 @@
 from datetime import date
 from typing import Protocol
-import pandas as pd
+
+from ingestion.source.schemas import CorporateActionRecord, DailyBarRecord, InstrumentRecord
+
 
 class MarketDataSource(Protocol):
-    def get_daily_bars(self, symbol: str, start_date: date, end_date: date) -> pd.DataFrame:
+    def get_daily_bars(self, symbol: str, start_date: date, end_date: date) -> list[DailyBarRecord]:
         ...
-    def get_corporate_actions(self, symbol: str) -> pd.DataFrame:
+    def get_corporate_actions(self, symbol: str) -> list[CorporateActionRecord]:
         ...
-    def get_instrument_info(self, symbol: str) -> dict:
+    def get_instrument_info(self, symbol: str) -> InstrumentRecord:
         ...

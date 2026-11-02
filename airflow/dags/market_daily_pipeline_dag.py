@@ -9,6 +9,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.append(str(BASE_DIR))
 
+from airflow.sensors.python import PythonSensor
+from ingestion.monitoring.cdc_check import cdc_caught_up
 from scripts.test_ingestion import main as run_ingestion_script
 
 default_args = {
@@ -19,10 +21,6 @@ default_args = {
     'retry_delay': timedelta(minutes=5),
 }
 
-def verify_cdc_ingestion():
-    print("Verifying CDC Data Stream in StarRocks raw_daily_bar...")
-    return True
-
 with DAG(
     'market_daily_pipeline',
     default_args=default_args,
@@ -32,14 +30,18 @@ with DAG(
     tags=['market', 'daily', 'pipeline'],
 ) as dag:
 
-    ingest_yfinance_task = PythonOperator(
-        task_id='ingest_yfinance_to_postgres',
+    ingest_task = PythonOperator(
+        task_id='ingest_market_data_to_postgres',
         python_callable=run_ingestion_script,
     )
 
-    verify_cdc_task = PythonOperator(
-        task_id='verify_cdc_ingestion',
-        python_callable=verify_cdc_ingestion,
+    # CDC chạy bất đồng bộ: đợi StarRocks khớp Postgres rồi mới cho dbt chạy
+    wait_for_cdc_task = PythonSensor(
+        task_id='wait_for_cdc_sync',
+        python_callable=cdc_caught_up,
+        mode='reschedule',       # giữa các lần kiểm tra, nhả slot worker cho task khác
+        poke_interval=15,        # kiểm tra lại sau mỗi 15 giây
+        timeout=10 * 60,         # quá 10 phút vẫn chưa khớp -> FAIL
     )
 
     dbt_run_task = BashOperator(
@@ -52,5 +54,5 @@ with DAG(
         bash_command='cd /opt/airflow/market_cdc && dbt test --profiles-dir .',
     )
 
-    ingest_yfinance_task >> verify_cdc_task >> dbt_run_task >> dbt_test_task
+    ingest_task >> wait_for_cdc_task >> dbt_run_task >> dbt_test_task
 

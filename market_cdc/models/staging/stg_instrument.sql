@@ -14,7 +14,6 @@ renamed as (
         op_ts as cdc_op_ts,
         _ingest_at
     from source
-    where op != 'd' or op is null
 )
 
 select * from renamed

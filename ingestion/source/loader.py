@@ -1,5 +1,6 @@
 import os 
 import json
+from typing import Optional
 import psycopg2
 from datetime import date
 from ingestion.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS, DATA_RAW_DIR
@@ -32,18 +33,20 @@ class PostgresLoader:
             return 
         
         sql = """
-        INSERT INTO daily_bar (symbol, trade_date, open, high, low, close, adj_close, volume)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        ON CONFLICT (symbol, trade_date) DO UPDATE SET
-        open = EXCLUDED.open,
-        high = EXCLUDED.high,
-        low = EXCLUDED.low,
-        close = EXCLUDED.close,
-        adj_close = EXCLUDED.adj_close,
-        volume = EXCLUDED.volume;
+            INSERT INTO daily_bar (symbol, trade_date, open, high, low, close, volume)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (symbol, trade_date) DO UPDATE SET
+                open = EXCLUDED.open,
+                high = EXCLUDED.high,
+                low = EXCLUDED.low,
+                close = EXCLUDED.close,
+                volume = EXCLUDED.volume
+            -- Chỉ UPDATE khi giá trị thực sự đổi, tránh sinh CDC event rác
+            WHERE (daily_bar.open, daily_bar.high, daily_bar.low, daily_bar.close, daily_bar.volume)
+                IS DISTINCT FROM (EXCLUDED.open, EXCLUDED.high, EXCLUDED.low, EXCLUDED.close, EXCLUDED.volume);
         """
         data_typles = [(
-            r.symbol, r.trade_date, r.open, r.high, r.low, r.close, r.adj_close, r.volume
+            r.symbol, r.trade_date, r.open, r.high, r.low, r.close, r.volume
         ) for r in records]
         with self.get_connection() as conn:
             with conn.cursor() as cur:
@@ -54,13 +57,20 @@ class PostgresLoader:
         if not records: return 
         
         sql = """
-        INSERT INTO corporate_action (symbol, action_date, action_type, value, value_raw)
-        VALUES (%s, %s, %s, %s, %s)
-        ON CONFLICT (symbol, action_date, action_type) DO UPDATE SET value = EXCLUDED.value, value_raw = EXCLUDED.value_raw;
+        INSERT INTO corporate_action (symbol, ex_date, action_type, cash_amount, ratio, subscription_price, announce_date)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT (symbol, ex_date, action_type) DO UPDATE SET
+            cash_amount = EXCLUDED.cash_amount,
+            ratio = EXCLUDED.ratio,
+            subscription_price = EXCLUDED.subscription_price,
+            announce_date = EXCLUDED.announce_date
+        WHERE (corporate_action.cash_amount, corporate_action.ratio, corporate_action.subscription_price, corporate_action.announce_date)
+            IS DISTINCT FROM (EXCLUDED.cash_amount, EXCLUDED.ratio, EXCLUDED.subscription_price, EXCLUDED.announce_date);
         """
-        date_str = date.today().strftime('%Y-%m-%d')
-        data_tuples = [(r.symbol, r.action_date, r.action_type, r.value, r.value_raw) for r in records]
-
+        data_tuples = [
+            (r.symbol, r.ex_date, r.action_type, r.cash_amount, r.ratio, r.subscription_price, r.announce_date)
+            for r in records]
+        
         with self.get_connection() as conn:
             with conn.cursor() as cur: 
                 cur.executemany(sql, data_tuples)
@@ -75,10 +85,21 @@ class PostgresLoader:
             name = EXCLUDED.name,
             exchange = EXCLUDED.exchange,
             sector = EXCLUDED.sector,
-            is_listed = EXCLUDED.is_listed;
+            is_listed = EXCLUDED.is_listed
+        WHERE (instrument.name, instrument.exchange, instrument.sector, instrument.is_listed)
+            IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.exchange, EXCLUDED.sector, EXCLUDED.is_listed);
         """
         data_tuples = [(record.symbol, record.name, record.exchange, record.sector, record.is_listed)]
         with self.get_connection() as conn:
             with conn.cursor() as cur: 
                 cur.executemany(sql, data_tuples)
             conn.commit()
+
+    def get_max_trade_date(self, symbol: str) -> Optional[date]:
+        sql = "SELECT MAX(trade_date) FROM daily_bar WHERE symbol = %s"
+        with self.get_connection() as conn:
+            with conn.cursor() as cur: 
+                cur.execute(sql, (symbol,))
+                res = cur.fetchone()
+                return res[0] if res and res[0] else None
+

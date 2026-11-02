@@ -3,16 +3,16 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from datetime import date, timedelta
-from ingestion.source.yfinance_source import YFinanceSource
+from ingestion.source.vndirect_source import VNDirectSource
 from ingestion.source.loader import PostgresLoader
 from ingestion.config import VN30_TICKERS
 
 def main():
     print("Script for testing ingestion")
-    source = YFinanceSource()
+    source = VNDirectSource()
     loader = PostgresLoader()
 
-    test_symbols = ['FPT.VN', 'VNM.VN', 'HPG.VN']
+    test_symbols = ['FPT', 'VNM', 'HPG']
     end_date = date.today()
     start_date = end_date - timedelta(days=30)
 

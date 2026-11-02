@@ -29,3 +29,6 @@ Thumbs.db
 # Project Internal Docs
 docs/
 
+# dbt local artifacts
+.user.yml
+*.duckdb

@@ -1,7 +1,10 @@
-yfinance>=0.2.30
-pandas>=2.0.0
-pydantic>=2.0.0
-psycopg2-binary>=2.9.6
-requests>=2.31.0
-dbt-starrocks>=1.5.0
-websocket-client
+# Local dev environment (.venv): run ingestion, dbt and tests from the host.
+# The Airflow container uses airflow/requirements.txt + an isolated dbt venv (see airflow/Dockerfile).
+# Keep this file ASCII-only: pip on Windows may decode it with the system codepage.
+pydantic==2.13.5
+psycopg2-binary==2.9.13
+mysql-connector-python==26.7.0
+requests==2.34.2
+dbt-core==1.12.5
+dbt-starrocks==1.12.2
+pytest==8.4.2
