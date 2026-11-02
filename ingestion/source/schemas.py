@@ -10,11 +10,17 @@ class DailyBarRecord(BaseModel):
     low: float = Field(gt=0)
     close: float = Field(gt=0)
     volume: int = Field(ge=0)
+    # Giá tham chiếu / trần / sàn do sàn công bố cho phiên (không có thì để None)
+    reference_price: Optional[float] = Field(default=None, gt=0)
+    ceiling_price: Optional[float] = Field(default=None, gt=0)
+    floor_price: Optional[float] = Field(default=None, gt=0)
 
-    @model_validator(mode='after') 
+    @model_validator(mode='after')
     def check_high_low(self) -> 'DailyBarRecord':
         if self.high < self.low:
             raise ValueError(f"high ({self.high}) must be >= low ({self.low})")
+        if self.ceiling_price is not None and self.floor_price is not None and self.ceiling_price < self.floor_price:
+            raise ValueError(f"ceiling_price ({self.ceiling_price}) must be >= floor_price ({self.floor_price})")
         return self
 
 REQUIRED_FIELDS = {

@@ -34,7 +34,8 @@ class FakeSession:
 
 def bar(day, close=126.03, volume=6494600.0):
     return {"date": day, "open": 128.0, "high": 128.0, "low": 126.0, "close": close,
-            "adClose": 97.266, "nmVolume": volume}
+            "adClose": 97.266, "nmVolume": volume,
+            "basicPrice": 127.0, "ceilingPrice": 135.8, "floorPrice": 118.2}
 
 
 def test_daily_bars_are_raw_prices_in_vnd():
@@ -47,6 +48,19 @@ def test_daily_bars_are_raw_prices_in_vnd():
     assert bars[0].open == 128000.0
     assert bars[0].volume == 6494600
     assert bars[0].trade_date == date(2025, 7, 18)
+    # giá tham chiếu / trần / sàn của sàn (HOSE ±7%)
+    assert (bars[0].reference_price, bars[0].ceiling_price, bars[0].floor_price) == (127000.0, 135800.0, 118200.0)
+
+
+def test_daily_bars_without_exchange_prices_keep_none():
+    row = bar("2025-07-18")
+    for key in ("basicPrice", "ceilingPrice", "floorPrice"):
+        del row[key]
+    session = FakeSession({"stock_prices": [[row]]})
+
+    bars = VNDirectSource(session=session).get_daily_bars("FPT", date(2025, 7, 18), date(2025, 7, 18))
+
+    assert (bars[0].reference_price, bars[0].ceiling_price, bars[0].floor_price) == (None, None, None)
 
 
 def test_pagination_stops_at_first_short_page():

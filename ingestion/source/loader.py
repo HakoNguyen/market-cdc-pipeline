@@ -33,20 +33,27 @@ class PostgresLoader:
             return 
         
         sql = """
-            INSERT INTO daily_bar (symbol, trade_date, open, high, low, close, volume)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO daily_bar (symbol, trade_date, open, high, low, close, volume,
+                                   reference_price, ceiling_price, floor_price)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (symbol, trade_date) DO UPDATE SET
                 open = EXCLUDED.open,
                 high = EXCLUDED.high,
                 low = EXCLUDED.low,
                 close = EXCLUDED.close,
-                volume = EXCLUDED.volume
+                volume = EXCLUDED.volume,
+                reference_price = EXCLUDED.reference_price,
+                ceiling_price = EXCLUDED.ceiling_price,
+                floor_price = EXCLUDED.floor_price
             -- Chỉ UPDATE khi giá trị thực sự đổi, tránh sinh CDC event rác
-            WHERE (daily_bar.open, daily_bar.high, daily_bar.low, daily_bar.close, daily_bar.volume)
-                IS DISTINCT FROM (EXCLUDED.open, EXCLUDED.high, EXCLUDED.low, EXCLUDED.close, EXCLUDED.volume);
+            WHERE (daily_bar.open, daily_bar.high, daily_bar.low, daily_bar.close, daily_bar.volume,
+                   daily_bar.reference_price, daily_bar.ceiling_price, daily_bar.floor_price)
+                IS DISTINCT FROM (EXCLUDED.open, EXCLUDED.high, EXCLUDED.low, EXCLUDED.close, EXCLUDED.volume,
+                                  EXCLUDED.reference_price, EXCLUDED.ceiling_price, EXCLUDED.floor_price);
         """
         data_typles = [(
-            r.symbol, r.trade_date, r.open, r.high, r.low, r.close, r.volume
+            r.symbol, r.trade_date, r.open, r.high, r.low, r.close, r.volume,
+            r.reference_price, r.ceiling_price, r.floor_price
         ) for r in records]
         with self.get_connection() as conn:
             with conn.cursor() as cur:

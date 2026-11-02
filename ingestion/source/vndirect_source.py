@@ -23,6 +23,13 @@ EVENT_TYPE_MAP = {
     "KINDDIV": "bonus_share",      # thưởng cổ phiếu
     "ISSUE": "rights_issue",       # phát hành quyền mua cho cổ đông hiện hữu
 }
+
+
+def _to_vnd(price: float | None) -> float | None:
+    """Giá từ API (nghìn VND) -> VND; trường không có thì giữ None."""
+    return round(price * PRICE_UNIT, 2) if price is not None else None
+
+
 class VNDirectSource:
     def __init__(self, session: requests.Session | None = None, timeout: int = 30):
         if session is None:
@@ -65,6 +72,9 @@ class VNDirectSource:
                 low=round(r["low"] * PRICE_UNIT, 2),
                 close=round(r["close"] * PRICE_UNIT, 2),
                 volume=int(r["nmVolume"]),  # khối lượng khớp lệnh, không gồm thoả thuận
+                reference_price=_to_vnd(r.get("basicPrice")),
+                ceiling_price=_to_vnd(r.get("ceilingPrice")),
+                floor_price=_to_vnd(r.get("floorPrice")),
             )
             for r in rows
         ]

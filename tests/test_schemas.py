@@ -3,7 +3,7 @@ from datetime import date
 import pytest
 from pydantic import ValidationError
 
-from ingestion.source.schemas import CorporateActionRecord
+from ingestion.source.schemas import CorporateActionRecord, DailyBarRecord
 
 
 def make(**fields):
@@ -31,3 +31,9 @@ def test_valid_corporate_actions(fields):
 def test_invalid_corporate_actions(fields):
     with pytest.raises(ValidationError):
         make(**fields)
+
+
+def test_daily_bar_rejects_ceiling_below_floor():
+    with pytest.raises(ValidationError):
+        DailyBarRecord(symbol="FPT", trade_date=date(2025, 7, 18), open=128000, high=128000, low=126000,
+                       close=126030, volume=1, reference_price=127000, ceiling_price=118200, floor_price=135800)
