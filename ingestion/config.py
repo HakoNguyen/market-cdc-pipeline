@@ -1,11 +1,10 @@
 import os
 
+# Rổ VN30 theo VNDirect /v4/stocks?q=indexCode:VN30 ngày 2026-11-02 (HOSE review rổ 6 tháng/lần)
 VN30_TICKERS = [
-    "FPT.VN", "VNM.VN", "HPG.VN", "VCB.VN", "SSI.VN", "TCB.VN", 
-    "MWG.VN", "MBB.VN", "VIC.VN", "VHM.VN", "STB.VN", "VPB.VN", 
-    "ACB.VN", "MSN.VN", "HDB.VN", "BID.VN", "CTG.VN", "GAS.VN", 
-    "PLX.VN", "VRE.VN", "SAB.VN", "POW.VN", "BCM.VN", "GVR.VN", 
-    "VIB.VN", "SHB.VN", "TPB.VN", "SSB.VN"
+    "ACB", "BID", "BSR", "CTG", "FPT", "GAS", "GVR", "HDB", "HPG", "LPB",
+    "MBB", "MCH", "MSN", "MWG", "SAB", "SHB", "SSB", "SSI", "STB", "TCB",
+    "TCX", "VCB", "VHM", "VIB", "VIC", "VJC", "VNM", "VPB", "VPL", "VRE",
 ]
 
 DB_HOST = os.getenv("POSTGRES_HOST", "localhost")

@@ -1,10 +1,9 @@
-# Local dev environment (.venv): run ingestion and dbt from the host.
+# Local dev environment (.venv): run ingestion, dbt and tests from the host.
 # The Airflow container uses airflow/requirements.txt + an isolated dbt venv (see airflow/Dockerfile).
 # Keep this file ASCII-only: pip on Windows may decode it with the system codepage.
-yfinance==1.7.0
-pandas==3.0.5
 pydantic==2.13.5
 psycopg2-binary==2.9.13
 requests==2.34.2
 dbt-core==1.12.5
 dbt-starrocks==1.12.2
+pytest==8.4.2

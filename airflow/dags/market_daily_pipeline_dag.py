@@ -32,8 +32,8 @@ with DAG(
     tags=['market', 'daily', 'pipeline'],
 ) as dag:
 
-    ingest_yfinance_task = PythonOperator(
-        task_id='ingest_yfinance_to_postgres',
+    ingest_task = PythonOperator(
+        task_id='ingest_market_data_to_postgres',
         python_callable=run_ingestion_script,
     )
 
@@ -52,5 +52,5 @@ with DAG(
         bash_command='cd /opt/airflow/market_cdc && dbt test --profiles-dir .',
     )
 
-    ingest_yfinance_task >> verify_cdc_task >> dbt_run_task >> dbt_test_task
+    ingest_task >> verify_cdc_task >> dbt_run_task >> dbt_test_task
 

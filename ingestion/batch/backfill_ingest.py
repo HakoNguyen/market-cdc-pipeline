@@ -3,20 +3,20 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from ingestion.source.loader import PostgresLoader
-from ingestion.source.yfinance_source import YFinanceSource
+from ingestion.source.vndirect_source import VNDirectSource
 from ingestion.config import VN30_TICKERS
 import argparse
 from datetime import date, datetime, timedelta
 
 def run_backfill(symbols=None, start_date=None, end_date=None, auto_catchup=True):
-    source = YFinanceSource()
+    source = VNDirectSource()
     loader = PostgresLoader()
 
     target_symbols = symbols or VN30_TICKERS
     today = date.today()
     target_end_date = end_date or today
 
-    print("Starting backfill for {} symbols, range {} to {} ")
+    print(f"Starting backfill for {len(target_symbols)} symbols, end date {target_end_date}")
 
     for symbol in target_symbols:
         inst = source.get_instrument_info(symbol)
@@ -50,7 +50,7 @@ def run_backfill(symbols=None, start_date=None, end_date=None, auto_catchup=True
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Backfill market daily bar data into Postgres.")
-    parser.add_argument("--symbols", nargs="+", help="List of symbols to backfill, e.g. FPT.VN VNM.VN")
+    parser.add_argument("--symbols", nargs="+", help="List of symbols to backfill, e.g. FPT VNM")
     parser.add_argument("--start-date", help="Start date (YYYY-MM-DD)")
     parser.add_argument("--end-date", help="End date (YYYY-MM-DD)")
     parser.add_argument("--no-catchup", action="store_true", help="Disable auto catchup based on MAX trade_date")
