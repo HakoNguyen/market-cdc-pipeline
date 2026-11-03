@@ -58,7 +58,7 @@ flowchart LR
 | CDC | Debezium 2.5 + Kafka 3.7 | One topic per table (`market.public.<table>`) |
 | Warehouse | StarRocks 4.1 | Routine Load jobs pull each topic into Primary Key tables |
 | Transform | dbt (dbt-starrocks) | Staging views, adjustment factors, adjusted prices, SMA and returns |
-| Orchestration | Airflow 2.8 (LocalExecutor) | Daily DAG: ingest → wait for CDC sync (sensor) → source freshness → dbt build |
+| Orchestration | Airflow 2.8 (LocalExecutor) | `market_daily` (17:00 Mon–Fri, `Asia/Ho_Chi_Minh`): ingest → wait for CDC sync (sensor) → source freshness → dbt build. `market_backfill`: same ingestion function, manual trigger with parameters |
 
 ## How price adjustment works
 
@@ -114,7 +114,18 @@ Credentials come from `.env` (copied from [.env.example](.env.example)). Postgre
 
 ## Loading data
 
-The daily DAG ingests a small window (FPT, VNM, HPG, last 30 days). To backfill the whole VN30 basket, run the backfill CLI from the host:
+`market_daily` reloads the last 5 days for the whole VN30 basket, counted back from the run's `data_interval_end`, so a missed session or a late correction at the source is picked up by the next run. It runs with `catchup=False`: the lookback window already covers missed runs. Re-running an old run reloads exactly the same window.
+
+To load history, trigger `market_backfill` from the Airflow UI (*Trigger DAG w/ config*: symbols one per line, empty = VN30; `start_date` required; `end_date` empty = today) or from the CLI:
+
+```bash
+docker compose exec airflow airflow dags trigger market_backfill \
+  -c '{"symbols": ["FPT", "HPG"], "start_date": "2025-07-01", "end_date": null}'
+```
+
+It runs the same ingestion function, waits for CDC, then runs `dbt build`. A task that fails after its retry is logged by `on_failure_callback`, and posted to Slack when `SLACK_WEBHOOK_URL` is set in `.env`.
+
+The same function is available as a CLI from the host:
 
 ```bash
 python -m venv .venv
@@ -185,7 +196,6 @@ Known gaps, being worked on:
 - **Corporate action coverage.** Cash dividends are stored but not yet applied, and rights issues are not ingested. Next: an explicit event schema (`cash_dividend`, `stock_dividend`, `bonus_share`, `rights_issue`, `split`) and the full set of factors above.
 - **Deletes and ordering.** Routine Load reads `payload.after` from the Debezium envelope, which is empty for deletes, so a DELETE in Postgres does not yet remove the row in StarRocks. Next: Debezium's `ExtractNewRecordState` transform, mapping deletes to StarRocks' `__op`, `merge_condition` on LSN, decimals as strings.
 - **Quality gate.** `verify_cdc_ingestion` is a placeholder. Next: a sensor that waits until StarRocks matches Postgres (row counts, `max(updated_at)`) before dbt runs, dbt source freshness, and a test that no adjusted return exceeds the exchange's daily price limit on an ex-date.
-- **Orchestration.** The daily DAG uses a fixed symbol list. Next: a parameterised backfill DAG and a daily DAG that share one ingestion function, scheduled in `Asia/Ho_Chi_Minh` time.
 - **Presentation.** A before/after demo of a corporate action flowing through CDC, and CI (pytest, `dbt parse`, lint).
 
 ## Project structure

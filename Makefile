@@ -18,8 +18,8 @@ init: up ## Khởi tạo topics, StarRocks DDL, Debezium connector, Routine Load
 status: ## Trạng thái services, connector, Routine Load, số dòng nguồn vs đích
 	bash scripts/status.sh
 
-ingest: ## Trigger DAG market_daily_pipeline ngay
-	docker compose exec airflow airflow dags trigger market_daily_pipeline
+ingest: ## Trigger DAG market_daily ngay
+	docker compose exec airflow airflow dags trigger market_daily
 
 down: ## Dừng stack, GIỮ dữ liệu
 	docker compose down

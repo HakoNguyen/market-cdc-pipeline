@@ -145,6 +145,7 @@ services:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-airflow}@airflow-postgres:5432/airflow_db
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__WEBSERVER__BASE_URL=http://localhost:8088
       - AIRFLOW_ADMIN_USER=${AIRFLOW_ADMIN_USER:-admin}
       - AIRFLOW_ADMIN_PASSWORD=${AIRFLOW_ADMIN_PASSWORD:-admin}
       - PYTHONPATH=/opt/airflow
@@ -154,6 +155,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - STARROCKS_HOST=starrocks
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
     healthcheck:
       test: [ "CMD-SHELL", "curl -fsS http://localhost:8080/health > /dev/null" ]
       interval: 10s
