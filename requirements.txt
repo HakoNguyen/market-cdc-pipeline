@@ -8,3 +8,4 @@ requests==2.34.2
 dbt-core==1.12.5
 dbt-starrocks==1.12.2
 pytest==8.4.2
+matplotlib==3.11.2  # scripts/simulate_corporate_action.py (demo chart)
