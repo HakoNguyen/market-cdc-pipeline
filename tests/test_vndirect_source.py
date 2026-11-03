@@ -41,7 +41,7 @@ def bar(day, close=126.03, volume=6494600.0):
 def test_daily_bars_are_raw_prices_in_vnd():
     session = FakeSession({"stock_prices": [[bar("2025-07-18")]]})
 
-    bars = VNDirectSource(session=session).get_daily_bars("FPT", date(2025, 7, 18), date(2025, 7, 18))
+    bars, _ = VNDirectSource(session=session).get_daily_bars("FPT", date(2025, 7, 18), date(2025, 7, 18))
 
     assert len(bars) == 1
     assert bars[0].close == 126030.0  # close thô x1000, không phải adClose
@@ -58,7 +58,7 @@ def test_daily_bars_without_exchange_prices_keep_none():
         del row[key]
     session = FakeSession({"stock_prices": [[row]]})
 
-    bars = VNDirectSource(session=session).get_daily_bars("FPT", date(2025, 7, 18), date(2025, 7, 18))
+    bars, _ = VNDirectSource(session=session).get_daily_bars("FPT", date(2025, 7, 18), date(2025, 7, 18))
 
     assert (bars[0].reference_price, bars[0].ceiling_price, bars[0].floor_price) == (None, None, None)
 
@@ -67,7 +67,7 @@ def test_pagination_stops_at_first_short_page():
     full_page = [bar(f"2024-01-{i % 28 + 1:02d}") for i in range(PAGE_SIZE)]
     session = FakeSession({"stock_prices": [full_page, [bar("2025-01-02")]]})
 
-    bars = VNDirectSource(session=session).get_daily_bars("FPT", date(2024, 1, 1), date(2025, 1, 2))
+    bars, _ = VNDirectSource(session=session).get_daily_bars("FPT", date(2024, 1, 1), date(2025, 1, 2))
 
     assert len(bars) == PAGE_SIZE + 1
     assert [p["page"] for _, p in session.calls] == [1, 2]
@@ -119,12 +119,32 @@ def test_instrument_info():
 
     assert (inst.name, inst.exchange, inst.sector, inst.is_listed) == ("FPT Corporation", "HOSE", "Technology", True)
 
+def test_bad_row_are_rejected_not_fatal():
+    good = bar("2025-07-17")                                       
+    high_below_low = bar("2025-07-18"); high_below_low["high"] = 100.0 
+    missing_open = bar("2025-07-21"); missing_open["open"] = None      
+    session = FakeSession({"stock_prices": [[good, high_below_low, missing_open]]})
+
+    bars, rejected = VNDirectSource(session=session).get_daily_bars("FPT", date(2025, 7, 17), date(2025, 7, 21))
+
+    assert [b.trade_date for b in bars] == [date(2025, 7, 17)]    
+    assert len(rejected) == 2
+    assert rejected[0]["row"]["date"] == "2025-07-18"             
+    assert "high" in rejected[0]["error"]       
+
+
+def test_unknown_symbol_raises_clear_error():
+    session = FakeSession({"stocks": [[]]})
+    with pytest.raises(ValueError, match="ZZZZ"):
+        VNDirectSource(session=session).get_instrument_info("ZZZZ")
+
 
 @pytest.mark.integration
 def test_live_prices_are_unadjusted_at_ex_date():
     """FPT thưởng 15%, GDKHQ 2025-07-21: giá thô phải giảm ~13% (1/1.15), giá đã điều chỉnh thì không."""
     source = VNDirectSource()
-    closes = {b.trade_date: b.close for b in source.get_daily_bars("FPT", date(2025, 7, 18), date(2025, 7, 21))}
+    bars, _ = source.get_daily_bars("FPT", date(2025, 7, 18), date(2025, 7, 21))
+    closes = {b.trade_date: b.close for b in bars}
 
     ratio = closes[date(2025, 7, 21)] / closes[date(2025, 7, 18)]
 

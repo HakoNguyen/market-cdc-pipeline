@@ -6,6 +6,7 @@ ngày 2025-07-21: close 126.03 -> 110.3. yfinance thì đã điều chỉnh sẵ
 trên 953 phiên FPT (2023-2026).
 """
 from datetime import date
+from pydantic import ValidationError
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -29,6 +30,19 @@ def _to_vnd(price: float | None) -> float | None:
     """Giá từ API (nghìn VND) -> VND; trường không có thì giữ None."""
     return round(price * PRICE_UNIT, 2) if price is not None else None
 
+def _to_bar(symbol: str, r: dict) -> DailyBarRecord:
+    return DailyBarRecord(
+        symbol=symbol,
+        trade_date=r["date"],
+        open=round(r["open"] * PRICE_UNIT, 2),
+        high=round(r["high"] * PRICE_UNIT, 2),
+        low=round(r["low"] * PRICE_UNIT, 2),
+        close=round(r["close"] * PRICE_UNIT, 2),
+        volume=int(r["nmVolume"]),  # khối lượng khớp lệnh, không gồm thoả thuận
+        reference_price=_to_vnd(r.get("basicPrice")),
+        ceiling_price=_to_vnd(r.get("ceilingPrice")),
+        floor_price=_to_vnd(r.get("floorPrice")),
+    )
 
 class VNDirectSource:
     def __init__(self, session: requests.Session | None = None, timeout: int = 30):
@@ -59,25 +73,17 @@ class VNDirectSource:
                 return rows
             page += 1
 
-    def get_daily_bars(self, symbol: str, start_date: date, end_date: date) -> list[DailyBarRecord]:
+    def get_daily_bars(self, symbol: str, start_date: date, end_date: date) -> tuple[list[DailyBarRecord], list[dict]]:
         rows = self._get_all(
             "stock_prices", f"code:{symbol}~date:gte:{start_date}~date:lte:{end_date}", sort="date:asc"
         )
-        return [
-            DailyBarRecord(
-                symbol=symbol,
-                trade_date=r["date"],
-                open=round(r["open"] * PRICE_UNIT, 2),
-                high=round(r["high"] * PRICE_UNIT, 2),
-                low=round(r["low"] * PRICE_UNIT, 2),
-                close=round(r["close"] * PRICE_UNIT, 2),
-                volume=int(r["nmVolume"]),  # khối lượng khớp lệnh, không gồm thoả thuận
-                reference_price=_to_vnd(r.get("basicPrice")),
-                ceiling_price=_to_vnd(r.get("ceilingPrice")),
-                floor_price=_to_vnd(r.get("floorPrice")),
-            )
-            for r in rows
-        ]
+        bars, rejected = [], []
+        for r in rows:
+            try: 
+                bars.append(_to_bar(symbol, r))
+            except (ValidationError, TypeError, KeyError) as e:
+                rejected.append({"row": r, "error": str(e)})
+        return bars, rejected
 
     def get_corporate_actions(self, symbol: str) -> list[CorporateActionRecord]:
         merged: dict[tuple[str, str], dict] = {}
@@ -116,7 +122,10 @@ class VNDirectSource:
         )
 
     def get_instrument_info(self, symbol: str) -> InstrumentRecord:
-        stock = self._get_all("stocks", f"code:{symbol}")[0]
+        stocks = self._get_all("stocks", f"code:{symbol}")
+        if not stocks:
+            raise ValueError(f"VNDirect không có mã {symbol}")
+        stock = stocks[0]
         industry = self._get_all("industry_classification", f"codeList:{symbol}~industryLevel:1")
         return InstrumentRecord(
             symbol=symbol,

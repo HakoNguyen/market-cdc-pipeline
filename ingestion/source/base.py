@@ -5,7 +5,8 @@ from ingestion.source.schemas import CorporateActionRecord, DailyBarRecord, Inst
 
 
 class MarketDataSource(Protocol):
-    def get_daily_bars(self, symbol: str, start_date: date, end_date: date) -> list[DailyBarRecord]:
+    def get_daily_bars(self, symbol: str, start_date: date, end_date: date) -> tuple[list[DailyBarRecord], list[dict]]:
+        """(bars hợp lệ, dòng bị loại [{'row', 'error'}])."""
         ...
     def get_corporate_actions(self, symbol: str) -> list[CorporateActionRecord]:
         ...

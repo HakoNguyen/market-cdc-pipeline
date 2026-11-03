@@ -4,7 +4,7 @@ from typing import Optional
 import psycopg2
 from psycopg2.extras import execute_values
 from datetime import date
-from ingestion.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS, DATA_RAW_DIR
+from ingestion.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS, DATA_RAW_DIR, DATA_QUARANTINE_DIR
 from ingestion.source.schemas import DailyBarRecord, CorporateActionRecord, InstrumentRecord
 
 class PostgresLoader:
@@ -35,14 +35,20 @@ class PostgresLoader:
         with self.conn, self.conn.cursor() as cur:
             execute_values(cur, sql, rows)
 
-    def save_raw_json(self, symbol: str, data_type: str, data: list[dict]):
-        today_str = date.today().strftime("%Y-%m-%d")
-        target_dir = os.path.join(DATA_RAW_DIR, today_str)
+    @staticmethod
+    def _write_json(base_dir: str, file_name: str, data: list[dict]):
+        """Ghi ra <base_dir>/<hôm nay>/<file_name>."""
+        target_dir = os.path.join(base_dir, date.today().strftime("%Y-%m-%d"))
         os.makedirs(target_dir, exist_ok=True)
-
-        file_path = os.path.join(target_dir, f"{symbol}_{data_type}.json")
-        with open(file_path, 'w', encoding='utf-8') as f:
+        with open(os.path.join(target_dir, file_name), 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2, default=str)
+
+    def save_raw_json(self, symbol: str, data_type: str, data: list[dict]):
+        self._write_json(DATA_RAW_DIR, f"{symbol}_{data_type}.json", data)
+
+    def save_quarantine(self, symbol: str, rows: list[dict]):
+        """Dòng nguồn không parse/validate được: [{'row': dòng gốc từ API, 'error': lý do}]."""
+        self._write_json(DATA_QUARANTINE_DIR, f"{symbol}.json", rows)
 
     def load_daily_bars(self, records: list[DailyBarRecord]):
         if not records:
