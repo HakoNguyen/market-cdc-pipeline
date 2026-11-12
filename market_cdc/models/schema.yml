@@ -31,11 +31,25 @@ models:
             combination_of_columns: [symbol, ex_date]
 
   - name: dim_instrument
-    columns: 
+    tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [symbol, valid_from]
+    columns:
       - name: symbol
-        tests: 
+        tests:
           - not_null
-          - unique
+          - unique:
+              config:
+                where: "is_current"
+
+
+  - name: dim_date
+    columns:
+      - name: date_day
+        tests: 
+           - not_null
+           - unique
   
   - name: fct_daily_bars
     tests:
@@ -51,8 +65,12 @@ models:
                 to: ref('dim_instrument')
                 field: symbol
       - name: trade_date
-        tests: 
+        tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_day
   
   - name: fct_corporate_actions
     tests:
