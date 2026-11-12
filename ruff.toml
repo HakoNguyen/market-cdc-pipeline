@@ -1,0 +1,5 @@
+extend-exclude = ["market_cdc/target", "market_cdc/dbt_packages", "logs"]
+
+[lint.per-file-ignores]
+# Script chạy trực tiếp: thêm thư mục gốc vào sys.path / chọn backend matplotlib trước khi import
+"scripts/*" = ["E402"]

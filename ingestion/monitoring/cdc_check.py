@@ -1,3 +1,5 @@
+import logging
+
 import mysql.connector
 import psycopg2
 
@@ -5,6 +7,8 @@ from ingestion.config import (DB_HOST, DB_NAME, DB_PASS, DB_PORT, DB_USER, STARR
 
 TABLES = ('daily_bar', 'instrument', 'corporate_action')
 ROUTINE_LOAD_JOBS = ('rl_daily_bar', 'rl_instrument', 'rl_corporate_action')
+
+log = logging.getLogger(__name__)
 
 def routine_load_states(sr_cur) -> dict[str, str]:
     """{tên job: trạng thái} của mọi job chưa bị STOP."""
@@ -34,7 +38,7 @@ def cdc_caught_up() -> bool:
             sr_cur.execute(f"select count(*), max(updated_at) from market_db.raw_{table}")
             pg_snapshot, sr_snapshot = pg_cur.fetchone(), sr_cur.fetchone()
             if pg_snapshot != sr_snapshot:
-                print(f"{table}: postgres={pg_snapshot} starrocks={sr_snapshot}")
+                log.info("%s chưa khớp: postgres=%s starrocks=%s", table, pg_snapshot, sr_snapshot)
                 return False
 
         return True
@@ -42,8 +46,3 @@ def cdc_caught_up() -> bool:
     finally:
         pg.close()
         sr.close()
-
-
-# # test
-# if __name__ == "__main__":
-#     print(cdc_caught_up())

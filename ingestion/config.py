@@ -20,3 +20,4 @@ STARROCKS_PASSWORD = os.getenv("STARROCKS_PASSWORD", "")
 
 
 DATA_RAW_DIR = "data/raw"
+DATA_QUARANTINE_DIR = "data/quarantine"

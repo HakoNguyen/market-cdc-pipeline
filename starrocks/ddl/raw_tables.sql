@@ -1,4 +1,5 @@
 CREATE DATABASE IF NOT EXISTS market_db;
+CREATE DATABASE IF NOT EXISTS analytics;
 USE market_db;
 
 CREATE TABLE IF NOT EXISTS raw_daily_bar(
@@ -9,6 +10,9 @@ CREATE TABLE IF NOT EXISTS raw_daily_bar(
     low DECIMAL(18, 4),
     close DECIMAL(18, 4),
     volume BIGINT,
+    reference_price DECIMAL(18, 4),
+    ceiling_price DECIMAL(18, 4),
+    floor_price DECIMAL(18, 4),
     updated_at DATETIME,
     op VARCHAR(10), 
     op_ts BIGINT, 

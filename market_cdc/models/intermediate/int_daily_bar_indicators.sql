@@ -29,11 +29,8 @@ select
     raw_close as close,
     adj_close,
     volume,
-    -- Chỉ báo tính trên giá điều chỉnh. Chưa đủ số phiên của cửa sổ thì trả NULL,
-    -- không trả trung bình của ít phiên hơn (con số sai nhưng trông như đúng).
     case when session_no >= 20 then avg_close_20 end as sma_20,
     case when session_no >= 50 then avg_close_50 end as sma_50,
-    -- Khối lượng thô: hệ số gộp cả cổ tức tiền, không áp cho khối lượng được
     case when session_no >= 20 then avg_volume_20 end as vol_sma_20,
     prev_adj_close,
     round((adj_close / nullif(prev_adj_close, 0) - 1) * 100, 4) as daily_return_pct

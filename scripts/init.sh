@@ -58,8 +58,9 @@ for f in starrocks/ddl/routine_load/*.sql; do
 done
 
 # Bật DAG sau cùng, khi pipeline đã sẵn sàng; scheduler sẽ tự chạy lần đầu (catchup=False)
-log "Airflow: bật DAG market_daily_pipeline"
-docker compose exec -T airflow airflow dags unpause market_daily_pipeline > /dev/null
+log "Airflow: bật DAG market_daily, market_backfill"
+docker compose exec -T airflow airflow dags unpause market_daily > /dev/null
+docker compose exec -T airflow airflow dags unpause market_backfill > /dev/null
 echo "OK"
 
 bash scripts/status.sh

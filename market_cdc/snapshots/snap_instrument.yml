@@ -1,0 +1,15 @@
+snapshots:
+  - name: snap_instrument
+    description: > 
+      Lịch sử thông tin mã (SCD2). updated_at do trigger Postgres đặt và chỉ đổi khi upsert
+      thật sự đổi giá trị, nên dùng strategy timestamp: valid_from là lúc thay đổi được
+      commit ở nguồn. Lịch sử chỉ có từ lần snapshot đầu tiên trở đi.
+    relation: ref('stg_instrument')
+    config: 
+      schema: snapshots
+      unique_key: symbol
+      strategy: timestamp
+      updated_at: updated_at
+      # dbt-starrocks chỉ xoá bảng tạm khi snapshot thành công; một lần fail để lại
+      # snap_instrument__dbt_tmp làm mọi lần chạy sau fail "already exists".
+      pre_hook: "drop table if exists {{ this.schema }}.{{ this.identifier }}__dbt_tmp"

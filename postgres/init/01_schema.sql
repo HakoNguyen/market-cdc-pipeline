@@ -7,7 +7,12 @@ create table if not exists daily_bar(
     high numeric(18, 4),
     low numeric(18, 4),
     close numeric(18, 4),
-    volume bigint, 
+    volume bigint,
+    -- Giá tham chiếu / trần / sàn do sàn công bố cho phiên: đối chiếu model điều chỉnh giá
+    -- và kiểm tra biên độ theo đúng sàn của từng phiên (HOSE ±7%, HNX ±10%, UPCoM ±15%)
+    reference_price numeric(18, 4),
+    ceiling_price numeric(18, 4),
+    floor_price numeric(18, 4),
     updated_at timestamptz not null default now(),
     primary key (symbol, trade_date)
 );

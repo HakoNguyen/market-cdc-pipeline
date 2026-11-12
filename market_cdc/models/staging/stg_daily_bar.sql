@@ -1,5 +1,5 @@
 with source as (
-    select * from market_db.raw_daily_bar
+    select * from {{ source('market_db', 'raw_daily_bar') }}
 ),
 
 renamed as (
@@ -11,6 +11,9 @@ renamed as (
         cast(low as decimal(18,4)) as low,
         cast(close as decimal(18,4)) as close,
         cast(volume as bigint) as volume,
+        cast(reference_price as decimal(18,4)) as reference_price,
+        cast(ceiling_price as decimal(18,4)) as ceiling_price,
+        cast(floor_price as decimal(18,4)) as floor_price,
         updated_at,
         op as cdc_op,
         op_ts as cdc_op_ts,

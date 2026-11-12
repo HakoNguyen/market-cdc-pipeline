@@ -1,5 +1,5 @@
 with source as (
-    select * from market_db.raw_corporate_action
+    select * from {{ source('market_db', 'raw_corporate_action') }}
 ),
 
 renamed as (
