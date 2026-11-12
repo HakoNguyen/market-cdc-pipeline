@@ -34,12 +34,12 @@ Vì vậy pipeline giữ **giá thô và sự kiện làm nguồn sự thật b�
 `make demo` ([scripts/simulate_corporate_action.py](scripts/simulate_corporate_action.py)) chạy lại sự kiện FPT ở trên trên giá thật, để thấy một sự kiện quyền đi qua CDC:
 
 1. Xoá sự kiện ở Postgres. CDC xoá nó ở StarRocks, dbt build lại: lợi suất ngày GDKHQ thành **−12.48%** giả, và dbt test `assert_reference_price_gaps_have_events` báo lỗi vì sàn đổi giá tham chiếu vào một ngày không có sự kiện nào.
-2. Nạp lại sự kiện. CDC đưa nó sang, `dbt build` xanh (30/30): lợi suất trở về **+0.65%**.
+2. Nạp lại sự kiện. CDC đưa nó sang, `dbt build` xanh (36/36): lợi suất trở về **+0.65%**.
 3. Đo độ trễ CDC, từ lúc commit ở Postgres tới lúc thấy được ở StarRocks.
 
 ![Giá điều chỉnh và lợi suất ngày của FPT khi có và không có sự kiện thưởng cổ phiếu](assets/demo_fpt_bonus_share.png)
 
-Đo trên laptop: **4–8 giây** từ lúc commit ở Postgres tới StarRocks, phần lớn là chu kỳ gom batch của Routine Load (`max_batch_interval` 10 giây). Sự kiện luôn được nạp lại, kể cả khi script lỗi giữa chừng.
+Đo trên laptop qua 12 lần chạy: **2–10 giây** từ lúc commit ở Postgres tới StarRocks, phần lớn là chu kỳ gom batch của Routine Load (`max_batch_interval` 10 giây). Sự kiện luôn được nạp lại, kể cả khi script lỗi giữa chừng.
 
 ## Kiến trúc
 
@@ -103,6 +103,13 @@ make init     # build + khởi động stack, rồi tạo topic, bảng, connect
 make status   # trạng thái service, connector, Routine Load, số dòng Postgres so với StarRocks
 ```
 
+Sau đó nạp lịch sử (VN30 từ 2025-07-01: chạy DAG `market_backfill` và chờ xong) rồi chạy demo:
+
+```bash
+make seed     # hoặc: bash scripts/seed.sh
+make demo     # venv trên host: pip install -r requirements.txt
+```
+
 Không có `make`:
 
 ```bash
@@ -131,6 +138,7 @@ Thông tin đăng nhập lấy từ `.env` (copy từ [.env.example](.env.exampl
 | `make init` | `up` + khởi tạo pipeline |
 | `make status` | Tóm tắt tình trạng pipeline |
 | `make ingest` | Trigger DAG hằng ngày ngay |
+| `make seed` | Nạp lịch sử VN30 từ 2025-07-01 qua `market_backfill`, chờ tới khi xong (`START=YYYY-MM-DD` để đổi) |
 | `make demo` | Chạy demo sự kiện quyền (venv trên host, xem [Demo](#demo)) |
 | `make down` | Dừng stack, giữ dữ liệu |
 | `make reset` | Dừng stack và **xoá toàn bộ volume** |
@@ -187,7 +195,10 @@ ORDER BY trade_date;
 | `analytics` | `int_adjusted_bars` | view | OHLCV thô, hệ số luỹ kế, giá điều chỉnh |
 | `analytics` | `int_daily_bar_indicators` | view | SMA 20/50, SMA khối lượng 20, lợi suất ngày trên giá điều chỉnh (`NULL` khi chưa đủ cửa sổ) |
 | `analytics` | `fct_daily_bars` | table | OHLCV thô + giá đóng cửa điều chỉnh + chỉ báo |
-| `analytics` | `fct_corporate_actions`, `dim_instrument` | table | Sự kiện quyền và dimension mã chứng khoán |
+| `analytics` | `fct_corporate_actions` | table | Sự kiện quyền |
+| `analytics_snapshots` | `snap_instrument` | dbt snapshot | Lịch sử SCD2 thông tin mã (strategy timestamp theo `updated_at` của nguồn) |
+| `analytics` | `dim_instrument` | table | Mỗi phiên bản của mã một dòng: `valid_from`, `valid_to`, `is_current` |
+| `analytics` | `dim_date` | table | Lịch ngày với `is_trading_day`, `is_holiday` (ngày thường sàn đóng cửa, suy ra từ dữ liệu) và `trade_day_no` |
 
 Chất lượng dữ liệu:
 
@@ -223,17 +234,20 @@ Unit test dùng HTTP session giả để kiểm tra đơn vị giá, phân trang
 
 ## Tình trạng và lộ trình
 
-Đã chạy được: toàn bộ luồng từ API tới marts cho VN30; điều chỉnh cổ tức tiền, cổ tức cổ phiếu, cổ phiếu thưởng và quyền mua; lệnh xoá đi qua CDC; ingestion idempotent kèm quarantine từng dòng; sensor đối soát và dbt test; DAG backfill có tham số; demo CDC; dựng toàn bộ bằng một lệnh.
+Đã chạy được: toàn bộ luồng từ API tới marts cho VN30; điều chỉnh cổ tức tiền, cổ tức cổ phiếu, cổ phiếu thưởng và quyền mua; lệnh xoá đi qua CDC; ingestion idempotent kèm quarantine từng dòng; sensor đối soát và dbt test; DAG backfill có tham số; lịch giao dịch và lịch sử SCD2 thông tin mã; demo CDC; dựng toàn bộ bằng một lệnh.
 
-Tiếp theo:
+CI (GitHub Actions) chạy ruff, pytest, `dbt parse` và `docker compose config` mỗi lần push.
 
-- **Mô hình:** lịch giao dịch (`dim_date`) và lịch sử SCD2 cho `dim_instrument` (ví dụ MCH chuyển từ UPCoM sang HOSE ngày 2025-12-25).
-- **CI:** GitHub Actions chạy pytest, `dbt parse` và lint.
+Lỗi đã biết của adapter (dbt-starrocks 1.12.2) và cách repo xử lý:
+
+- **Snapshot:** bước merge của adapter dùng `UPDATE` nhiều bảng kiểu MySQL, StarRocks không hỗ trợ. [macros/snapshot_merge.sql](market_cdc/macros/snapshot_merge.sql) thay bằng `INSERT OVERWRITE` để đóng các phiên bản cũ; một `pre_hook` xoá bảng tạm mà lần chạy lỗi để lại.
+- **Kết nối:** adapter coi mọi lỗi kết nối là "chưa có database" và chạy `CREATE DATABASE`, nên các thread song song tranh nhau tạo trên warehouse mới. `init` tạo sẵn database `analytics`.
 
 ## Cấu trúc thư mục
 
 ```
 .
+├── .github/workflows/    # CI: ruff, pytest, dbt parse
 ├── airflow/              # Image Airflow (dbt trong venv riêng), DAG market_daily và market_backfill
 ├── assets/               # Hình cho README
 ├── debezium/connectors/  # Cấu hình connector nguồn Postgres
@@ -243,7 +257,7 @@ Tiếp theo:
 │   └── monitoring/       # Kiểm tra đối soát CDC, cảnh báo khi fail
 ├── market_cdc/           # Project dbt
 ├── postgres/init/        # Schema OLTP, trigger updated_at, publication, user Debezium
-├── scripts/              # init.sh, status.sh, simulate_corporate_action.py (demo)
+├── scripts/              # init.sh, status.sh, seed.sh, simulate_corporate_action.py (demo)
 ├── starrocks/ddl/        # Bảng raw, mỗi topic một job Routine Load
 ├── tests/                # pytest: unit + API thật
 ├── docker-compose.yml

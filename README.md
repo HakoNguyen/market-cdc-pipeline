@@ -34,12 +34,12 @@ So the pipeline keeps **raw prices and events as the immutable source of truth**
 `make demo` ([scripts/simulate_corporate_action.py](scripts/simulate_corporate_action.py)) replays the FPT event above on real prices:
 
 1. Deletes the event in Postgres. CDC removes it from StarRocks, dbt rebuilds: the ex-date return becomes a fake **−12.48%**, and the dbt test `assert_reference_price_gaps_have_events` fails because the exchange moved the reference price on a day with no event.
-2. Inserts the event again. CDC delivers it, `dbt build` passes (30/30): the return is back to **+0.65%**.
+2. Inserts the event again. CDC delivers it, `dbt build` passes (36/36): the return is back to **+0.65%**.
 3. Measures CDC latency from the Postgres commit until the change is visible in StarRocks.
 
 ![FPT adjusted close and daily return with and without the bonus share event](assets/demo_fpt_bonus_share.png)
 
-Measured on a laptop: **4–8 s** from Postgres commit to StarRocks, most of it Routine Load's batch interval (`max_batch_interval` 10 s). The event is always restored, even if the script fails halfway.
+Measured on a laptop over 12 runs: **2–10 s** from Postgres commit to StarRocks, most of it Routine Load's batch interval (`max_batch_interval` 10 s). The event is always restored, even if the script fails halfway.
 
 ## Architecture
 
@@ -103,6 +103,13 @@ make init     # build + start the stack, then create topics, tables, connector, 
 make status   # services, connector state, Routine Load state, row counts Postgres vs StarRocks
 ```
 
+Then load history (VN30 from 2025-07-01: runs the `market_backfill` DAG and waits for it) and run the demo:
+
+```bash
+make seed     # or: bash scripts/seed.sh
+make demo     # host venv: pip install -r requirements.txt
+```
+
 Without `make`:
 
 ```bash
@@ -131,6 +138,7 @@ Credentials come from `.env` (copied from [.env.example](.env.example)). Postgre
 | `make init` | `up` + initialise the pipeline |
 | `make status` | Pipeline health summary |
 | `make ingest` | Trigger the daily DAG now |
+| `make seed` | Load VN30 history from 2025-07-01 through `market_backfill`, wait until done (`START=YYYY-MM-DD` to change) |
 | `make demo` | Run the corporate action demo (host venv, see [Demo](#demo-one-corporate-action-through-cdc)) |
 | `make down` | Stop the stack, keep data |
 | `make reset` | Stop the stack and **delete all volumes** |
@@ -187,7 +195,10 @@ ORDER BY trade_date;
 | `analytics` | `int_adjusted_bars` | view | Raw OHLCV, cumulative factor, adjusted prices |
 | `analytics` | `int_daily_bar_indicators` | view | SMA 20/50, volume SMA 20, daily return on adjusted close (`NULL` until the window is full) |
 | `analytics` | `fct_daily_bars` | table | Raw OHLCV + adjusted close + indicators |
-| `analytics` | `fct_corporate_actions`, `dim_instrument` | table | Events and instrument dimension |
+| `analytics` | `fct_corporate_actions` | table | Corporate actions |
+| `analytics_snapshots` | `snap_instrument` | dbt snapshot | SCD2 history of instrument attributes (timestamp strategy on the source `updated_at`) |
+| `analytics` | `dim_instrument` | table | One row per instrument version: `valid_from`, `valid_to`, `is_current` |
+| `analytics` | `dim_date` | table | Calendar with `is_trading_day`, `is_holiday` (weekdays the exchange was closed, derived from the data) and `trade_day_no` |
 
 Data quality:
 
@@ -223,17 +234,20 @@ Unit tests use a fake HTTP session to check price units, pagination, event mappi
 
 ## Status and roadmap
 
-Working today: the full flow from the API to the marts for VN30, adjustment for cash dividends, stock dividends, bonus shares and rights issues, deletes propagated through CDC, idempotent ingestion with row-level quarantine, the reconciliation sensor and dbt tests, a parameterised backfill DAG, the CDC demo, one-command setup.
+Working today: the full flow from the API to the marts for VN30, adjustment for cash dividends, stock dividends, bonus shares and rights issues, deletes propagated through CDC, idempotent ingestion with row-level quarantine, the reconciliation sensor and dbt tests, a parameterised backfill DAG, a trading calendar and SCD2 instrument history, the CDC demo, one-command setup.
 
-Next:
+CI (GitHub Actions) runs ruff, pytest, `dbt parse` and `docker compose config` on every push.
 
-- **Modeling:** a trading calendar (`dim_date`) and SCD2 history for `dim_instrument` (e.g. MCH moved from UPCoM to HOSE on 2025-12-25).
-- **CI:** GitHub Actions running pytest, `dbt parse` and lint.
+Known adapter issues (dbt-starrocks 1.12.2), worked around in this repo:
+
+- **Snapshots:** the adapter's merge uses MySQL's multi-table `UPDATE`, which StarRocks rejects. [macros/snapshot_merge.sql](market_cdc/macros/snapshot_merge.sql) replaces it with an `INSERT OVERWRITE` that closes replaced versions; a `pre_hook` drops the temp table a failed run leaves behind.
+- **Connections:** the adapter treats any connection error as "database missing" and runs `CREATE DATABASE`, so parallel threads race on a fresh warehouse. `init` creates the `analytics` database up front.
 
 ## Project structure
 
 ```
 .
+├── .github/workflows/    # CI: ruff, pytest, dbt parse
 ├── airflow/              # Airflow image (dbt in a separate venv), DAGs market_daily and market_backfill
 ├── assets/               # README images
 ├── debezium/connectors/  # Postgres source connector config
@@ -243,7 +257,7 @@ Next:
 │   └── monitoring/       # CDC reconciliation check, failure alerts
 ├── market_cdc/           # dbt project
 ├── postgres/init/        # OLTP schema, updated_at triggers, publication, Debezium user
-├── scripts/              # init.sh, status.sh, simulate_corporate_action.py (demo)
+├── scripts/              # init.sh, status.sh, seed.sh, simulate_corporate_action.py (demo)
 ├── starrocks/ddl/        # Raw tables, one Routine Load job per topic
 ├── tests/                # pytest: unit + live API
 ├── docker-compose.yml
