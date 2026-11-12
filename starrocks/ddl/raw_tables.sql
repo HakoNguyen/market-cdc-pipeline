@@ -1,4 +1,5 @@
 CREATE DATABASE IF NOT EXISTS market_db;
+CREATE DATABASE IF NOT EXISTS analytics;
 USE market_db;
 
 CREATE TABLE IF NOT EXISTS raw_daily_bar(

@@ -14,8 +14,8 @@ bounds as (
 ),
 
 spine as (
-    select date_add(b.first_day, interval s.generate_series day) as date_day
-    from bounds b, table(generate_series(0, b.n_days)) s
+    select cast(date_add(b.first_day, interval t.n day) as date) as date_day
+    from bounds b, unnest(array_generate(0, b.n_days, 1)) as t(n)
 ),
 
 flagged as (

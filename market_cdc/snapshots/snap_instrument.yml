@@ -10,3 +10,6 @@ snapshots:
       unique_key: symbol
       strategy: timestamp
       updated_at: updated_at
+      # dbt-starrocks chỉ xoá bảng tạm khi snapshot thành công; một lần fail để lại
+      # snap_instrument__dbt_tmp làm mọi lần chạy sau fail "already exists".
+      pre_hook: "drop table if exists {{ this.schema }}.{{ this.identifier }}__dbt_tmp"
