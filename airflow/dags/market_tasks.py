@@ -1,14 +1,7 @@
 """Phần dùng chung của market_daily và market_backfill (không chứa DAG)."""
-import sys
 from datetime import timedelta
-from pathlib import Path
 
 import pendulum
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-if str(BASE_DIR) not in sys.path:
-    sys.path.append(str(BASE_DIR))
-
 from airflow.operators.bash import BashOperator
 from airflow.sensors.python import PythonSensor
 

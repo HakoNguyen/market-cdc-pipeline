@@ -120,9 +120,11 @@ def test_instrument_info():
     assert (inst.name, inst.exchange, inst.sector, inst.is_listed) == ("FPT Corporation", "HOSE", "Technology", True)
 
 def test_bad_row_are_rejected_not_fatal():
-    good = bar("2025-07-17")                                       
-    high_below_low = bar("2025-07-18"); high_below_low["high"] = 100.0 
-    missing_open = bar("2025-07-21"); missing_open["open"] = None      
+    good = bar("2025-07-17")
+    high_below_low = bar("2025-07-18")
+    high_below_low["high"] = 100.0  # low = 126 -> Pydantic loại
+    missing_open = bar("2025-07-21")
+    missing_open["open"] = None  # None * 1000 -> TypeError
     session = FakeSession({"stock_prices": [[good, high_below_low, missing_open]]})
 
     bars, rejected = VNDirectSource(session=session).get_daily_bars("FPT", date(2025, 7, 17), date(2025, 7, 21))

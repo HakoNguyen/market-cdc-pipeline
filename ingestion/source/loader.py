@@ -80,7 +80,8 @@ class PostgresLoader:
         self._execute_batch(sql, data_typles)
 
     def load_corporate_actions(self, records: list[CorporateActionRecord]):
-        if not records: return
+        if not records:
+            return
 
         sql = """
         INSERT INTO corporate_action (symbol, ex_date, action_type, cash_amount, ratio, subscription_price, announce_date)

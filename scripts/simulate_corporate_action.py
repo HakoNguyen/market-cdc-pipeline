@@ -149,7 +149,7 @@ def main():
             caught = not dbt("test", "--select", GAP_TEST)
             print(f"    {'Đã phát hiện thiếu sự kiện' if caught else 'KHÔNG phát hiện được, kiểm tra lại test'}")
         finally:
-            step(f"2. INSERT lại sự kiện ở Postgres, chờ CDC")
+            step("2. INSERT lại sự kiện ở Postgres, chờ CDC")
             insert_latency = commit_and_wait_for_cdc(
                 pg, sr,
                 f"insert into corporate_action ({', '.join(COLUMNS)}) values ({', '.join(['%s'] * len(COLUMNS))}) "
