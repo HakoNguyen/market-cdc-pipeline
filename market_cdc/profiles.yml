@@ -3,7 +3,7 @@ market_cdc:
   outputs:
     dev:
       type: starrocks
-      host: "{{ env_var('STARROCKS_HOST', '127.0.0.1') }}"
+      host: "{{ env_var('STARROCKS_HOST', 'localhost') }}"
       port: 9030
       username: root
       password: ""

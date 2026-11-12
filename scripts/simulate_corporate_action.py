@@ -50,6 +50,8 @@ def dbt(*args) -> bool:
                             capture_output=True, text=True, encoding="utf-8", errors="replace")
     summary = [line for line in result.stdout.splitlines() if "Done. PASS=" in line or " FAIL " in line]
     print("    " + "\n    ".join(summary or result.stdout.splitlines()[-3:]))
+    if result.returncode >= 2:
+        raise RuntimeError("dbt không chạy được, xem lỗi ở trên")
     return result.returncode == 0
 
 
