@@ -1,5 +1,7 @@
 # Market CDC Pipeline
 
+**English** · [Tiếng Việt](README.vi.md)
+
 Change-data-capture pipeline for Vietnamese equities (VN30). Raw daily prices and corporate actions live in PostgreSQL; Debezium streams every change through Kafka into StarRocks; dbt turns them into **corporate-action-adjusted** prices and indicators; Airflow orchestrates the daily run.
 
 ```
